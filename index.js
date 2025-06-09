@@ -29,7 +29,10 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Body parsing middleware
+// ✅ CORRECTION: Raw body pour webhooks Stripe AVANT le parsing JSON
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
+
+// Body parsing middleware pour toutes les autres routes
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
