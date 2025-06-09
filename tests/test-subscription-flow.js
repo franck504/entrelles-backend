@@ -1,8 +1,8 @@
 const axios = require('axios');
 
 // Configuration
-const BASE_URL = 'https://entrelles-backend.vercel.app/api';
-// const BASE_URL = 'http://localhost:3000/api';
+// const BASE_URL = 'https://entrelles-backend.vercel.app/api';
+const BASE_URL = 'http://localhost:3000/api';
 
 async function testSubscriptionFlow() {
   console.log('🧪 === TEST COMPLET ABONNEMENT STRIPE ===\n');
@@ -184,6 +184,7 @@ async function testRealStripeFlow() {
 // ========================================
 async function runAllTests() {
   await testSubscriptionFlow();
+//   await testRealStripeFlow()
   
   console.log('\n' + '='.repeat(50));
   console.log('🤔 Voulez-vous tester avec une vraie session Stripe ?');
