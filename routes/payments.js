@@ -3,10 +3,7 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const {
   createCheckoutSession,
-  createPortalSession,
-  getSubscriptionStatus,
-  cancelSubscription,
-  reactivateSubscription
+  verifyCheck
 } = require('../controllers/paymentController');
 
 // Routes protégées

@@ -21,10 +21,10 @@ class StripeService {
     }
   }
 
-  // Créer une session de checkout (sans redirection)
+  // Créer une session de checkout
   async createCheckoutSession(customerId, priceId) {
     try {
-      // ✅ VÉRIFICATION : Tester si le prix existe
+      // Vérifier si le prix existe
       let validPriceId = priceId;
       
       try {
@@ -55,14 +55,13 @@ class StripeService {
         payment_method_types: ['card'],
         line_items: [
           {
-            price: validPriceId, // Utiliser le prix valide
+            price: validPriceId,
             quantity: 1,
           },
         ],
         mode: 'subscription',
-        // ✅ Pas d'URLs de redirection - retour JSON
-        success_url: 'https://dummy.com/success',
-        cancel_url: 'https://dummy.com/cancel',
+        success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.FRONTEND_URL}/cancel`,
         metadata: {
           customerId: customerId
         }
@@ -72,7 +71,7 @@ class StripeService {
         sessionId: session.id,
         url: session.url,
         customerId: customerId,
-        priceId: validPriceId // Retourner le prix utilisé
+        priceId: validPriceId
       };
     } catch (error) {
       console.error('Error creating checkout session:', error);
@@ -80,16 +79,14 @@ class StripeService {
     }
   }
 
-  // ✅ AMÉLIORATION : Créer un portail client avec gestion d'erreur améliorée
+  // Créer un portail client
   async createPortalSession(customerId) {
     try {
-      // Vérifier d'abord si le customer existe
       const customer = await stripe.customers.retrieve(customerId);
       if (!customer) {
         throw new Error('Customer not found');
       }
 
-      // Vérifier s'il y a des abonnements ACTIFS
       const subscriptions = await stripe.subscriptions.list({
         customer: customerId,
         status: 'active',
@@ -97,7 +94,6 @@ class StripeService {
       });
 
       if (subscriptions.data.length === 0) {
-        console.log('⚠️ Aucun abonnement actif trouvé pour ce client');
         return {
           url: null,
           message: 'No active subscription found. Customer portal not available.',
@@ -118,7 +114,6 @@ class StripeService {
     } catch (error) {
       console.error('Error creating portal session:', error);
       
-      // ✅ Gestion spécifique des erreurs de configuration
       if (error.message.includes('configuration')) {
         return {
           url: null,
@@ -164,42 +159,6 @@ class StripeService {
     }
   }
 
-  // Annuler un abonnement (en fin de période)
-  async cancelSubscription(subscriptionId) {
-    try {
-      const subscription = await stripe.subscriptions.update(subscriptionId, {
-        cancel_at_period_end: true
-      });
-
-      return {
-        cancelled: true,
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000)
-      };
-    } catch (error) {
-      console.error('Error cancelling subscription:', error);
-      throw new Error('Failed to cancel subscription');
-    }
-  }
-
-  // Réactiver un abonnement annulé
-  async reactivateSubscription(subscriptionId) {
-    try {
-      const subscription = await stripe.subscriptions.update(subscriptionId, {
-        cancel_at_period_end: false
-      });
-
-      return {
-        reactivated: true,
-        status: subscription.status,
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000)
-      };
-    } catch (error) {
-      console.error('Error reactivating subscription:', error);
-      throw new Error('Failed to reactivate subscription');
-    }
-  }
-
   // Vérifier la signature du webhook
   verifyWebhookSignature(payload, signature) {
     try {
@@ -212,6 +171,11 @@ class StripeService {
       console.error('Webhook signature verification failed:', error);
       throw new Error('Invalid webhook signature');
     }
+  }
+
+  // Exposer l'instance Stripe pour verify-checkout
+  get stripe() {
+    return stripe;
   }
 }
 
