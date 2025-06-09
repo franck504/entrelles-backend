@@ -80,19 +80,50 @@ class StripeService {
     }
   }
 
-  // Créer un portail client pour gérer l'abonnement
+  // ✅ AMÉLIORATION : Créer un portail client avec gestion d'erreur
   async createPortalSession(customerId) {
     try {
+      // Vérifier d'abord si le customer existe et a des abonnements
+      const customer = await stripe.customers.retrieve(customerId);
+      if (!customer) {
+        throw new Error('Customer not found');
+      }
+
+      // Vérifier s'il y a des abonnements
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        limit: 1
+      });
+
+      if (subscriptions.data.length === 0) {
+        console.log('⚠️ Aucun abonnement trouvé pour ce client');
+        return {
+          url: null,
+          message: 'No active subscription found. Customer portal not available.'
+        };
+      }
+
       const session = await stripe.billingPortal.sessions.create({
         customer: customerId,
-        return_url: 'https://dummy.com/account', // URL fictive
+        return_url: process.env.FRONTEND_URL || 'https://entrelles.vercel.app/dashboard',
       });
 
       return {
-        url: session.url
+        url: session.url,
+        message: 'Portal session created successfully'
       };
     } catch (error) {
       console.error('Error creating portal session:', error);
+      
+      // ✅ Gestion spécifique des erreurs de configuration
+      if (error.message.includes('configuration')) {
+        return {
+          url: null,
+          message: 'Customer portal not configured. Please set up billing portal in Stripe Dashboard.',
+          configUrl: 'https://dashboard.stripe.com/test/settings/billing/portal'
+        };
+      }
+      
       throw new Error('Failed to create portal session');
     }
   }

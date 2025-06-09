@@ -88,6 +88,15 @@ const createPortalSession = async (req, res) => {
       user.subscription.stripeCustomerId
     );
 
+    // ✅ Gérer le cas où le portail n'est pas disponible
+    if (!portal.url) {
+      return res.status(400).json({
+        success: false,
+        message: portal.message,
+        configUrl: portal.configUrl
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: 'Portal session created',
