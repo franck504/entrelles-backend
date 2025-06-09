@@ -1,11 +1,9 @@
 const axios = require('axios');
 const readline = require('readline');
 
-// Configuration - Changez selon votre environnement
+// Configuration
 const BASE_URL = 'https://entrelles-backend.vercel.app/api';
-// const BASE_URL = 'http://localhost:3000/api'; // Pour local
 
-// Interface pour interaction utilisateur
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
@@ -100,60 +98,63 @@ async function testRealStripePayment() {
     await askQuestion('Appuyez sur Entrée après avoir complété le paiement...');
 
     // ========================================
-    // 6. VÉRIFIER STATUT APRÈS PAIEMENT
+    // 6. VÉRIFIER STATUT APRÈS PAIEMENT (PLUSIEURS TENTATIVES)
     // ========================================
     console.log('\n🔄 6. Vérification du statut après paiement...');
     
-    // Attendre un peu pour que le webhook soit traité
-    console.log('⏳ Attente du traitement du webhook (10 secondes)...');
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    let updatedStatus;
+    let webhookReceived = false;
+    const maxAttempts = 6; // 6 tentatives sur 30 secondes
     
-    let updatedStatus = await axios.get(`${BASE_URL}/payments/subscription-status`, { headers });
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      console.log(`⏳ Tentative ${attempt}/${maxAttempts} - Attente webhook (5 secondes)...`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      updatedStatus = await axios.get(`${BASE_URL}/payments/subscription-status`, { headers });
+      
+      if (updatedStatus.data.data.hasActiveSubscription) {
+        webhookReceived = true;
+        console.log('🎉 WEBHOOK REÇU ! Abonnement activé automatiquement');
+        break;
+      } else {
+        console.log(`❌ Tentative ${attempt} - Webhook non reçu encore...`);
+      }
+    }
     
-    console.log('✅ Statut après paiement:', {
+    console.log('\n✅ Statut final après paiement:', {
       hasActiveSubscription: updatedStatus.data.data.hasActiveSubscription,
       plan: updatedStatus.data.data.plan,
       status: updatedStatus.data.data.status,
       currentPeriodEnd: updatedStatus.data.data.currentPeriodEnd,
-      stripeCustomerId: updatedStatus.data.data.stripeCustomerId
+      stripeCustomerId: updatedStatus.data.data.stripeCustomerId,
+      webhookReceived: webhookReceived
     });
 
     // ========================================
-    // 6.5. SIMULATION SI WEBHOOK NON REÇU
+    // 7. DIAGNOSTIC SI WEBHOOK NON REÇU
     // ========================================
-    if (!updatedStatus.data.data.hasActiveSubscription) {
-      console.log('\n⚠️ Webhook non reçu, simulation de l\'activation...');
+    if (!webhookReceived) {
+      console.log('\n🚨 === DIAGNOSTIC WEBHOOK ===');
+      console.log('❌ Aucun webhook reçu après 30 secondes');
+      console.log('🔧 ACTIONS REQUISES :');
+      console.log('1. Vérifiez la configuration webhook dans Stripe Dashboard');
+      console.log('2. URL webhook : https://entrelles-backend.vercel.app/api/webhooks/stripe');
+      console.log('3. Événements requis : checkout.session.completed, customer.subscription.*');
+      console.log('4. Vérifiez que STRIPE_WEBHOOK_SECRET est configuré dans Vercel');
+      console.log('\n🔍 VÉRIFICATIONS :');
+      console.log('- Dashboard Stripe : https://dashboard.stripe.com/test/webhooks');
+      console.log('- Logs Vercel : https://vercel.com/dashboard');
+      console.log('- Test webhook : https://dashboard.stripe.com/test/webhooks/[webhook_id]');
       
-      try {
-        const simulateResponse = await axios.post(`${BASE_URL}/webhooks/simulate-payment`, {
-          userId: userId
-        }, { headers });
-        
-        console.log('✅ Simulation réussie:', simulateResponse.data.message);
-        console.log('📊 Données simulation:', simulateResponse.data.data);
-        
-        // ✅ ATTENDRE UN PEU PLUS pour que la DB soit mise à jour
-        console.log('⏳ Attente mise à jour DB (3 secondes)...');
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        // Revérifier le statut
-        updatedStatus = await axios.get(`${BASE_URL}/payments/subscription-status`, { headers });
-        console.log('✅ Statut après simulation:', {
-          hasActiveSubscription: updatedStatus.data.data.hasActiveSubscription,
-          plan: updatedStatus.data.data.plan,
-          status: updatedStatus.data.data.status
-        });
-        
-      } catch (simError) {
-        console.log('⚠️ Erreur simulation:', simError.response?.data?.message);
-        console.log('📋 Détails erreur:', simError.response?.data);
-      }
+      // NE PAS faire de simulation pour un vrai test
+      console.log('\n⚠️ Test interrompu - Webhooks requis pour un test réel');
+      return;
     }
 
     // ========================================
-    // 7. VÉRIFIER PROFIL UTILISATEUR
+    // 8. VÉRIFIER PROFIL UTILISATEUR
     // ========================================
-    console.log('\n👤 7. Vérification profil utilisateur...');
+    console.log('\n👤 8. Vérification profil utilisateur...');
     const profileResponse = await axios.get(`${BASE_URL}/auth/me`, { headers });
     
     console.log('✅ Profil utilisateur:', {
@@ -162,9 +163,9 @@ async function testRealStripePayment() {
     });
 
     // ========================================
-    // 8. TESTER PORTAIL CLIENT
+    // 9. TESTER PORTAIL CLIENT
     // ========================================
-    console.log('\n🏪 8. Test portail client Stripe...');
+    console.log('\n🏪 9. Test portail client Stripe...');
     try {
       const portalResponse = await axios.post(`${BASE_URL}/payments/create-portal`, {}, { headers });
       console.log('✅ Portail client créé:', {
@@ -176,41 +177,26 @@ async function testRealStripePayment() {
       
     } catch (error) {
       console.log('⚠️ Erreur portail client:', error.response?.data?.message);
-      
-      // Si c'est un problème de configuration, donner des instructions
-      if (error.response?.data?.configUrl) {
-        console.log('🔧 Configurez le portail client ici:', error.response.data.configUrl);
-      }
     }
 
     // ========================================
-    // 9. RÉSUMÉ FINAL
+    // 10. RÉSUMÉ FINAL
     // ========================================
-    console.log('\n📊 === RÉSUMÉ DU TEST ===');
+    console.log('\n📊 === RÉSUMÉ DU TEST RÉEL ===');
     console.log(`✅ Utilisateur créé: ${registerData.email}`);
     console.log(`✅ Customer Stripe: ${customerId}`);
     console.log(`✅ Session checkout: ${sessionId}`);
     console.log('✅ Paiement traité par Stripe');
-    
-    if (updatedStatus.data.data.hasActiveSubscription) {
-      console.log('✅ Webhook reçu et traité');
-      console.log('✅ Abonnement activé');
-      console.log('\n🎉 TEST RÉUSSI - Vérifiez votre dashboard Stripe !');
-    } else {
-      console.log('⚠️ Webhook non reçu automatiquement');
-      console.log('⚠️ Abonnement activé par simulation');
-      console.log('\n🔧 CONFIGUREZ LES WEBHOOKS dans Stripe Dashboard');
-    }
+    console.log('✅ Webhook reçu et traité automatiquement');
+    console.log('✅ Abonnement activé sans simulation');
+    console.log('\n🎉 TEST RÉEL RÉUSSI ! Intégration Stripe fonctionnelle');
     
     // Informations pour vérification
     console.log('\n🔍 === VÉRIFICATIONS DASHBOARD STRIPE ===');
-    console.log('1. Allez sur https://dashboard.stripe.com/test/payments');
-    console.log('2. Cherchez le paiement avec l\'email:', registerData.email);
-    console.log('3. Vérifiez les webhooks sur https://dashboard.stripe.com/test/webhooks');
-    console.log('4. Consultez les clients sur https://dashboard.stripe.com/test/customers');
-    console.log('\n🔧 === CONFIGURATION WEBHOOK ===');
-    console.log('URL: https://entrelles-backend.vercel.app/api/webhooks/stripe');
-    console.log('Événements: checkout.session.completed, customer.subscription.*');
+    console.log('1. Paiements : https://dashboard.stripe.com/test/payments');
+    console.log('2. Abonnements : https://dashboard.stripe.com/test/subscriptions');
+    console.log('3. Clients : https://dashboard.stripe.com/test/customers');
+    console.log('4. Webhooks : https://dashboard.stripe.com/test/webhooks');
 
   } catch (error) {
     console.error('\n❌ ERREUR DANS LE TEST:', {
@@ -218,20 +204,17 @@ async function testRealStripePayment() {
       status: error.response?.status,
       data: error.response?.data
     });
-    
-    if (error.response?.data) {
-      console.error('📋 Détails de l\'erreur:', JSON.stringify(error.response.data, null, 2));
-    }
   } finally {
     rl.close();
   }
 }
 
 // ========================================
-// TEST AUTOMATISÉ AVEC SIMULATION
+// TEST AUTOMATISÉ AVEC SIMULATION (SÉPARÉ)
 // ========================================
 async function testWithSimulation() {
   console.log('\n🤖 === TEST AUTOMATISÉ AVEC SIMULATION ===');
+  console.log('⚠️ Ce test utilise une simulation, pas de vrais webhooks Stripe');
   
   try {
     // Inscription
@@ -273,8 +256,8 @@ async function testWithSimulation() {
 // ========================================
 async function main() {
   console.log('🎯 === TESTS PAIEMENT STRIPE ENTRELLES ===\n');
-  console.log('1. Test avec VRAI paiement Stripe (interactif)');
-  console.log('2. Test avec simulation automatique');
+  console.log('1. Test avec VRAI paiement Stripe + webhooks réels');
+  console.log('2. Test avec simulation automatique (développement)');
   console.log('3. Les deux tests\n');
   
   const choice = await askQuestion('Choisissez une option (1, 2, ou 3): ');
