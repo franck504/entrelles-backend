@@ -5,7 +5,6 @@ const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
-// Import de la configuration database
 const connectDB = require('./config/database');
 
 const app = express();
@@ -29,10 +28,7 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// ✅ CORRECTION: Raw body pour webhooks Stripe AVANT le parsing JSON
-app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
-
-// Body parsing middleware pour toutes les autres routes
+// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
@@ -62,8 +58,6 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/trips', require('./routes/trips'));
 app.use('/api/bookings', require('./routes/bookings'));
-app.use('/api/payments', require('./routes/payments'));
-app.use('/api/webhooks', require('./routes/webhooks'));
 
 // Test database route
 app.get('/test-db', async (req, res) => {

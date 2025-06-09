@@ -94,7 +94,6 @@ const userSchema = new mongoose.Schema({
     },
     chatLevel: {
       type: String,
-      // ✅ CORRECTION: Ajouter 'high' aux valeurs autorisées
       enum: ['none', 'low', 'medium', 'high'],
       default: 'medium'
     },
@@ -131,37 +130,6 @@ const userSchema = new mongoose.Schema({
       url: String,
       verifiedAt: Date
     }]
-  },
-  subscription: {
-    isActive: {
-      type: Boolean,
-      default: false
-    },
-    plan: {
-      type: String,
-      enum: ['free', 'premium'],
-      default: 'free'
-    },
-    status: {
-      type: String,
-      enum: ['active', 'inactive', 'cancelled', 'expired', 'past_due', 'none'],
-      default: 'inactive'
-    },
-    stripeCustomerId: String,
-    stripeSubscriptionId: String,
-    currentPeriodStart: Date,
-    currentPeriodEnd: Date,
-    cancelAtPeriodEnd: {
-      type: Boolean,
-      default: false
-    },
-    trialEnd: Date,
-    priceId: String,
-    lastPaymentStatus: {
-      type: String,
-      enum: ['succeeded', 'failed', 'pending'],
-      default: 'pending'
-    }
   },
   stats: {
     tripsAsDriver: {
@@ -279,7 +247,6 @@ userSchema.methods.isLocked = function() {
 
 // Méthode pour incrémenter les tentatives de connexion
 userSchema.methods.incLoginAttempts = async function() {
-  // Si on a un verrou précédent et qu'il a expiré, on remet à zéro
   if (this.security.lockUntil && this.security.lockUntil < Date.now()) {
     return this.updateOne({
       $unset: {
@@ -291,10 +258,9 @@ userSchema.methods.incLoginAttempts = async function() {
   
   const updates = { $inc: { 'security.loginAttempts': 1 } };
   
-  // Si on atteint la limite, on verrouille le compte
   if (this.security.loginAttempts + 1 >= 5 && !this.isLocked()) {
     updates.$set = {
-      'security.lockUntil': Date.now() + 2 * 60 * 60 * 1000 // 2 heures
+      'security.lockUntil': Date.now() + 2 * 60 * 60 * 1000
     };
   }
   

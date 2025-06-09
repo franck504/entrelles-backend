@@ -41,10 +41,6 @@ const sendTokenResponse = (user, statusCode, res, message = 'Success') => {
           isPhoneVerified: user.verification.isPhoneVerified,
           isIdentityVerified: user.verification.isIdentityVerified
         },
-        subscription: {
-          isActive: user.subscription.isActive,
-          status: user.subscription.status
-        },
         stats: user.stats,
         createdAt: user.createdAt
       }
