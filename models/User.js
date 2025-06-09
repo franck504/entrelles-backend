@@ -144,7 +144,7 @@ const userSchema = new mongoose.Schema({
     },
     status: {
       type: String,
-      enum: ['active', 'inactive', 'cancelled', 'expired'],
+      enum: ['active', 'inactive', 'cancelled', 'expired', 'past_due'],
       default: 'inactive'
     },
     stripeCustomerId: String,
@@ -154,6 +154,13 @@ const userSchema = new mongoose.Schema({
     cancelAtPeriodEnd: {
       type: Boolean,
       default: false
+    },
+    trialEnd: Date,
+    priceId: String,
+    lastPaymentStatus: {
+      type: String,
+      enum: ['succeeded', 'failed', 'pending'],
+      default: 'pending'
     }
   },
   stats: {

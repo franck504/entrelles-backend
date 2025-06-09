@@ -1,8 +1,8 @@
 const axios = require('axios');
 
 
-// const BASE_URL = 'http://localhost:3000/api'; // ✅ Port 3000
-const BASE_URL = 'https://entrelles-backend.vercel.app/api';
+const BASE_URL = 'http://localhost:3000/api'; 
+// const BASE_URL = 'https://entrelles-backend.vercel.app/api';
 // Variables globales pour stocker les données
 let aliceToken = '';
 let marieToken = '';

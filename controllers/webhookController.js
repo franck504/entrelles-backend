@@ -57,6 +57,67 @@ const handleStripeWebhook = async (req, res) => {
   }
 };
 
+// @desc    Simuler un webhook de paiement réussi (DÉVELOPPEMENT UNIQUEMENT)
+// @route   POST /api/webhooks/simulate-payment
+// @access  Private (pour tests)
+const simulatePayment = async (req, res) => {
+  try {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({
+        success: false,
+        message: 'Simulation not allowed in production'
+      });
+    }
+
+    const { userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID required'
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Simuler un abonnement actif
+    user.subscription = {
+      isActive: true,
+      plan: 'premium',
+      status: 'active',
+      stripeCustomerId: user.subscription?.stripeCustomerId || 'cus_simulated',
+      stripeSubscriptionId: 'sub_simulated_' + Date.now(),
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 jours
+      cancelAtPeriodEnd: false
+    };
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment simulated successfully',
+      data: {
+        userId: user._id,
+        subscription: user.subscription
+      }
+    });
+
+  } catch (error) {
+    console.error('Simulate payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to simulate payment'
+    });
+  }
+};
+
 // Fonctions de traitement des événements
 async function handleCheckoutCompleted(session) {
   console.log('✅ Checkout complété:', session.id);
@@ -135,5 +196,6 @@ async function handlePaymentFailed(invoice) {
 }
 
 module.exports = {
-  handleStripeWebhook
+  handleStripeWebhook,
+  simulatePayment
 };
