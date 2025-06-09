@@ -3,16 +3,20 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const {
   createCheckoutSession,
-  verifyCheck
+  verifyCheckoutSession,
+  createPortalSession,
+  getSubscriptionStatus
 } = require('../controllers/paymentController');
 
 // Routes protégées
 router.use(protect);
 
+// Routes principales
 router.post('/create-checkout', createCheckoutSession);
 router.post('/create-portal', createPortalSession);
 router.get('/subscription-status', getSubscriptionStatus);
-router.post('/cancel-subscription', cancelSubscription);
-router.post('/reactivate-subscription', reactivateSubscription);
+
+// Route publique pour vérification
+router.get('/verify-checkout', verifyCheckoutSession);
 
 module.exports = router;

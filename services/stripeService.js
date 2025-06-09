@@ -24,7 +24,7 @@ class StripeService {
   // Créer une session de checkout
   async createCheckoutSession(customerId, priceId) {
     try {
-      // Vérifier si le prix existe
+      // Vérifier si le prix existe, sinon en créer un
       let validPriceId = priceId;
       
       try {
@@ -33,7 +33,6 @@ class StripeService {
       } catch (priceError) {
         console.log('⚠️ Prix non trouvé, création automatique...');
         
-        // Créer un produit et prix automatiquement
         const product = await stripe.products.create({
           name: 'Entrelles Premium',
           description: 'Abonnement premium Entrelles'
@@ -60,8 +59,8 @@ class StripeService {
           },
         ],
         mode: 'subscription',
-        success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.FRONTEND_URL}/cancel`,
+        success_url: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/cancel`,
         metadata: {
           customerId: customerId
         }
@@ -82,34 +81,14 @@ class StripeService {
   // Créer un portail client
   async createPortalSession(customerId) {
     try {
-      const customer = await stripe.customers.retrieve(customerId);
-      if (!customer) {
-        throw new Error('Customer not found');
-      }
-
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customerId,
-        status: 'active',
-        limit: 1
-      });
-
-      if (subscriptions.data.length === 0) {
-        return {
-          url: null,
-          message: 'No active subscription found. Customer portal not available.',
-          hasActiveSubscription: false
-        };
-      }
-
       const session = await stripe.billingPortal.sessions.create({
         customer: customerId,
-        return_url: process.env.FRONTEND_URL || 'https://entrelles.vercel.app/dashboard',
+        return_url: process.env.FRONTEND_URL || 'http://localhost:3001/dashboard',
       });
 
       return {
         url: session.url,
-        message: 'Portal session created successfully',
-        hasActiveSubscription: true
+        message: 'Portal session created successfully'
       };
     } catch (error) {
       console.error('Error creating portal session:', error);
@@ -159,21 +138,7 @@ class StripeService {
     }
   }
 
-  // Vérifier la signature du webhook
-  verifyWebhookSignature(payload, signature) {
-    try {
-      return stripe.webhooks.constructEvent(
-        payload,
-        signature,
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
-    } catch (error) {
-      console.error('Webhook signature verification failed:', error);
-      throw new Error('Invalid webhook signature');
-    }
-  }
-
-  // Exposer l'instance Stripe pour verify-checkout
+  // Exposer l'instance Stripe
   get stripe() {
     return stripe;
   }
