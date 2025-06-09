@@ -130,6 +130,11 @@ async function testRealStripePayment() {
         }, { headers });
         
         console.log('✅ Simulation réussie:', simulateResponse.data.message);
+        console.log('📊 Données simulation:', simulateResponse.data.data);
+        
+        // ✅ ATTENDRE UN PEU PLUS pour que la DB soit mise à jour
+        console.log('⏳ Attente mise à jour DB (3 secondes)...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
         // Revérifier le statut
         updatedStatus = await axios.get(`${BASE_URL}/payments/subscription-status`, { headers });
@@ -141,6 +146,7 @@ async function testRealStripePayment() {
         
       } catch (simError) {
         console.log('⚠️ Erreur simulation:', simError.response?.data?.message);
+        console.log('📋 Détails erreur:', simError.response?.data);
       }
     }
 

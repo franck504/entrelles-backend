@@ -121,7 +121,8 @@ const getSubscriptionStatus = async (req, res) => {
   try {
     const userId = req.user.id;
     
-    const user = await User.findById(userId);
+    // ✅ CORRECTION : Récupérer l'utilisateur avec les données fraîches
+    const user = await User.findById(userId).lean(); // .lean() pour de meilleures performances
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -129,7 +130,14 @@ const getSubscriptionStatus = async (req, res) => {
       });
     }
 
-    // ✅ AMÉLIORATION : Vérifier d'abord la base de données locale
+    console.log('🔍 Données utilisateur récupérées:', {
+      userId,
+      isActive: user.subscription?.isActive,
+      plan: user.subscription?.plan,
+      status: user.subscription?.status
+    });
+
+    // ✅ AMÉLIORATION : Construire la réponse directement depuis la DB
     let subscriptionData = {
       hasActiveSubscription: user.subscription?.isActive || false,
       status: user.subscription?.status || 'inactive',
@@ -141,12 +149,18 @@ const getSubscriptionStatus = async (req, res) => {
       stripeSubscriptionId: user.subscription?.stripeSubscriptionId || null
     };
 
-    // Si on a un customer ID Stripe, vérifier avec Stripe
-    if (user.subscription?.stripeCustomerId) {
+    console.log('✅ Données subscription construites:', subscriptionData);
+
+    // Si on a un customer ID Stripe ET que l'abonnement n'est pas actif localement,
+    // vérifier avec Stripe
+    if (user.subscription?.stripeCustomerId && !user.subscription?.isActive) {
       try {
+        console.log('🔍 Vérification avec Stripe...');
         const stripeStatus = await stripeService.getSubscriptionStatus(
           user.subscription.stripeCustomerId
         );
+        
+        console.log('📊 Statut Stripe:', stripeStatus);
         
         // Mettre à jour avec les données Stripe si différentes
         if (stripeStatus.hasActiveSubscription !== subscriptionData.hasActiveSubscription) {
@@ -156,22 +170,25 @@ const getSubscriptionStatus = async (req, res) => {
             plan: stripeStatus.hasActiveSubscription ? 'premium' : 'free'
           };
           
+          // Gérer le cas où Stripe retourne 'none'
           const validStatus = stripeStatus.status === 'none' ? 'inactive' : stripeStatus.status;
           
           // Mettre à jour la base de données
-          user.subscription = {
-            ...user.subscription,
-            isActive: stripeStatus.hasActiveSubscription,
-            status: validStatus,
-            plan: stripeStatus.hasActiveSubscription ? 'premium' : 'free',
-            currentPeriodStart: stripeStatus.currentPeriodStart,
-            currentPeriodEnd: stripeStatus.currentPeriodEnd,
-            cancelAtPeriodEnd: stripeStatus.cancelAtPeriodEnd
-          };
-          await user.save();
+          await User.findByIdAndUpdate(userId, {
+            $set: {
+              'subscription.isActive': stripeStatus.hasActiveSubscription,
+              'subscription.status': validStatus,
+              'subscription.plan': stripeStatus.hasActiveSubscription ? 'premium' : 'free',
+              'subscription.currentPeriodStart': stripeStatus.currentPeriodStart,
+              'subscription.currentPeriodEnd': stripeStatus.currentPeriodEnd,
+              'subscription.cancelAtPeriodEnd': stripeStatus.cancelAtPeriodEnd
+            }
+          });
+          
+          console.log('✅ Base de données mise à jour avec les données Stripe');
         }
       } catch (stripeError) {
-        console.error('Stripe verification error:', stripeError);
+        console.error('❌ Stripe verification error:', stripeError.message);
         // Continuer avec les données locales en cas d'erreur Stripe
       }
     }
@@ -182,7 +199,7 @@ const getSubscriptionStatus = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get subscription status error:', error);
+    console.error('❌ Get subscription status error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get subscription status'

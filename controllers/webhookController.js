@@ -8,25 +8,13 @@ const handleStripeWebhook = async (req, res) => {
   const signature = req.headers['stripe-signature'];
   
   try {
-    console.log('🔔 Webhook reçu, type de body:', typeof req.body);
-    console.log('🔔 Signature:', signature ? 'Présente' : 'Absente');
-    
-    // ✅ CORRECTION: Vérifier que le body est bien raw
-    if (!Buffer.isBuffer(req.body)) {
-      console.error('❌ Body n\'est pas un Buffer:', typeof req.body);
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid webhook payload format'
-      });
-    }
-
     // Vérifier la signature
     const event = stripeService.verifyWebhookSignature(
       req.body,
       signature
     );
 
-    console.log(`🔔 Webhook vérifié: ${event.type}`);
+    console.log(`🔔 Webhook reçu: ${event.type}`);
 
     // Traiter selon le type d'événement
     switch (event.type) {
@@ -54,10 +42,6 @@ const handleStripeWebhook = async (req, res) => {
         await handlePaymentFailed(event.data.object);
         break;
         
-      case 'customer.created':
-        console.log('✅ Client Stripe créé:', event.data.object.id);
-        break;
-        
       default:
         console.log(`⚠️ Événement non géré: ${event.type}`);
     }
@@ -65,12 +49,10 @@ const handleStripeWebhook = async (req, res) => {
     res.status(200).json({ received: true });
     
   } catch (error) {
-    console.error('❌ Erreur webhook:', error.message);
-    console.error('❌ Stack:', error.stack);
+    console.error('❌ Erreur webhook:', error);
     res.status(400).json({
       success: false,
-      message: 'Webhook error',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Webhook error'
     });
   }
 };
@@ -96,6 +78,8 @@ const simulatePayment = async (req, res) => {
       });
     }
 
+    console.log('🔍 Simulation pour userId:', userId);
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -104,35 +88,60 @@ const simulatePayment = async (req, res) => {
       });
     }
 
-    // ✅ CORRECTION : Simuler un abonnement actif avec statut valide
-    user.subscription = {
+    console.log('✅ Utilisateur trouvé, état actuel:', {
+      isActive: user.subscription?.isActive,
+      plan: user.subscription?.plan,
+      status: user.subscription?.status
+    });
+
+    // ✅ CORRECTION COMPLÈTE : Simuler un abonnement actif
+    const simulatedSubscription = {
       isActive: true,
       plan: 'premium',
-      status: 'active', // ✅ Statut valide au lieu de 'none'
-      stripeCustomerId: user.subscription?.stripeCustomerId || 'cus_simulated',
-      stripeSubscriptionId: 'sub_simulated_' + Date.now(),
+      status: 'active',
+      stripeCustomerId: user.subscription?.stripeCustomerId || `cus_simulated_${Date.now()}`,
+      stripeSubscriptionId: `sub_simulated_${Date.now()}`,
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 jours
       cancelAtPeriodEnd: false,
-      lastPaymentStatus: 'succeeded' // ✅ Ajouter le statut de paiement
+      lastPaymentStatus: 'succeeded'
     };
 
-    await user.save();
+    // ✅ IMPORTANT : Utiliser findByIdAndUpdate pour être sûr de la sauvegarde
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { 
+        $set: { 
+          subscription: simulatedSubscription 
+        }
+      },
+      { 
+        new: true, 
+        runValidators: true 
+      }
+    );
+
+    console.log('✅ Utilisateur mis à jour:', {
+      isActive: updatedUser.subscription.isActive,
+      plan: updatedUser.subscription.plan,
+      status: updatedUser.subscription.status
+    });
 
     res.status(200).json({
       success: true,
       message: 'Payment simulated successfully',
       data: {
-        userId: user._id,
-        subscription: user.subscription
+        userId: updatedUser._id,
+        subscription: updatedUser.subscription
       }
     });
 
   } catch (error) {
-    console.error('Simulate payment error:', error);
+    console.error('❌ Simulate payment error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to simulate payment'
+      message: 'Failed to simulate payment',
+      error: error.message
     });
   }
 };
@@ -152,8 +161,6 @@ async function handleCheckoutCompleted(session) {
     await user.save();
     
     console.log(`✅ Utilisateur ${user.email} activé en Premium`);
-  } else {
-    console.log('⚠️ Utilisateur non trouvé pour customer:', session.customer);
   }
 }
 
@@ -172,8 +179,6 @@ async function handleSubscriptionCreated(subscription) {
     user.subscription.currentPeriodStart = new Date(subscription.current_period_start * 1000);
     user.subscription.currentPeriodEnd = new Date(subscription.current_period_end * 1000);
     await user.save();
-    
-    console.log(`✅ Abonnement activé pour ${user.email}`);
   }
 }
 
@@ -190,8 +195,6 @@ async function handleSubscriptionUpdated(subscription) {
     user.subscription.cancelAtPeriodEnd = subscription.cancel_at_period_end;
     user.subscription.currentPeriodEnd = new Date(subscription.current_period_end * 1000);
     await user.save();
-    
-    console.log(`✅ Abonnement mis à jour pour ${user.email}`);
   }
 }
 
@@ -207,8 +210,6 @@ async function handleSubscriptionDeleted(subscription) {
     user.subscription.status = 'cancelled';
     user.subscription.plan = 'free';
     await user.save();
-    
-    console.log(`✅ Abonnement annulé pour ${user.email}`);
   }
 }
 
