@@ -76,7 +76,7 @@ const verifyCheckoutSession = async (req, res) => {
 
     console.log('🔍 Vérification session:', sessionId);
 
-    // Utiliser l'instance Stripe du service
+    // Utiliser Stripe directement
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
@@ -281,9 +281,121 @@ const getSubscriptionStatus = async (req, res) => {
   }
 };
 
+// @desc    Annuler l'abonnement
+// @route   POST /api/payments/cancel-subscription
+// @access  Private
+const cancelSubscription = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const user = await User.findById(userId);
+    if (!user || !user.subscription.stripeCustomerId) {
+      return res.status(404).json({
+        success: false,
+        message: 'No subscription found'
+      });
+    }
+
+    // Récupérer l'ID d'abonnement depuis Stripe
+    const subscriptionStatus = await stripeService.getSubscriptionStatus(
+      user.subscription.stripeCustomerId
+    );
+
+    if (!subscriptionStatus.hasActiveSubscription || !subscriptionStatus.subscriptionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active subscription to cancel'
+      });
+    }
+
+    const result = await stripeService.cancelSubscription(
+      subscriptionStatus.subscriptionId
+    );
+
+    // Mettre à jour la base de données
+    user.subscription.cancelAtPeriodEnd = true;
+    user.subscription.stripeSubscriptionId = subscriptionStatus.subscriptionId;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Subscription will be cancelled at the end of the current period',
+      data: {
+        cancelled: result.cancelled,
+        currentPeriodEnd: result.currentPeriodEnd
+      }
+    });
+
+  } catch (error) {
+    console.error('Cancel subscription error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to cancel subscription'
+    });
+  }
+};
+
+// @desc    Réactiver l'abonnement
+// @route   POST /api/payments/reactivate-subscription
+// @access  Private
+const reactivateSubscription = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const user = await User.findById(userId);
+    if (!user || !user.subscription.stripeCustomerId) {
+      return res.status(404).json({
+        success: false,
+        message: 'No subscription found'
+      });
+    }
+
+    // Récupérer l'ID d'abonnement depuis Stripe
+    const subscriptionStatus = await stripeService.getSubscriptionStatus(
+      user.subscription.stripeCustomerId
+    );
+
+    if (!subscriptionStatus.subscriptionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'No subscription to reactivate'
+      });
+    }
+
+    const result = await stripeService.reactivateSubscription(
+      subscriptionStatus.subscriptionId
+    );
+
+    // Mettre à jour la base de données
+    user.subscription.cancelAtPeriodEnd = false;
+    user.subscription.isActive = true;
+    user.subscription.status = 'active';
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Subscription reactivated successfully',
+      data: {
+        reactivated: result.reactivated,
+        status: result.status,
+        currentPeriodEnd: result.currentPeriodEnd
+      }
+    });
+
+  } catch (error) {
+    console.error('Reactivate subscription error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to reactivate subscription'
+    });
+  }
+};
+
 module.exports = {
   createCheckoutSession,
   verifyCheckoutSession,
   createPortalSession,
-  getSubscriptionStatus
+  getSubscriptionStatus,
+  cancelSubscription,
+  reactivateSubscription
 };

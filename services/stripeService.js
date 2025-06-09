@@ -138,6 +138,42 @@ class StripeService {
     }
   }
 
+  // Annuler un abonnement (en fin de période)
+  async cancelSubscription(subscriptionId) {
+    try {
+      const subscription = await stripe.subscriptions.update(subscriptionId, {
+        cancel_at_period_end: true
+      });
+
+      return {
+        cancelled: true,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000)
+      };
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
+      throw new Error('Failed to cancel subscription');
+    }
+  }
+
+  // Réactiver un abonnement annulé
+  async reactivateSubscription(subscriptionId) {
+    try {
+      const subscription = await stripe.subscriptions.update(subscriptionId, {
+        cancel_at_period_end: false
+      });
+
+      return {
+        reactivated: true,
+        status: subscription.status,
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000)
+      };
+    } catch (error) {
+      console.error('Error reactivating subscription:', error);
+      throw new Error('Failed to reactivate subscription');
+    }
+  }
+
   // Exposer l'instance Stripe
   get stripe() {
     return stripe;

@@ -5,17 +5,22 @@ const {
   createCheckoutSession,
   verifyCheckoutSession,
   createPortalSession,
-  getSubscriptionStatus
+  getSubscriptionStatus,
+  cancelSubscription,
+  reactivateSubscription
 } = require('../controllers/paymentController');
 
-// ✅ ROUTE PUBLIQUE EN PREMIER
+// ✅ ROUTES PUBLIQUES EN PREMIER (avant router.use(protect))
 router.get('/verify-checkout', verifyCheckoutSession);
 
-// Routes protégées
+// ✅ MAINTENANT on applique la protection
 router.use(protect);
 
+// Routes protégées
 router.post('/create-checkout', createCheckoutSession);
 router.post('/create-portal', createPortalSession);
 router.get('/subscription-status', getSubscriptionStatus);
+router.post('/cancel-subscription', cancelSubscription);
+router.post('/reactivate-subscription', reactivateSubscription);
 
 module.exports = router;
