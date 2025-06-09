@@ -10,7 +10,7 @@ const {
   reactivateSubscription
 } = require('../controllers/paymentController');
 
-// ✅ ROUTES PUBLIQUES EN PREMIER (avant router.use(protect))
+// ✅ ROUTES PUBLIQUES EN PREMIER (avant protect)
 router.get('/verify-checkout', verifyCheckoutSession);
 
 // ✅ MAINTENANT on applique la protection

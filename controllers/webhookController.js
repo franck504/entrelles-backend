@@ -146,6 +146,50 @@ const simulatePayment = async (req, res) => {
   }
 };
 
+// Ajouter cette fonction simple
+const simulateStripeWebhook = async (req, res) => {
+  try {
+    const { sessionId, customerId } = req.body;
+    
+    console.log('🔔 Simulation webhook pour session:', sessionId);
+    
+    // Trouver l'utilisateur
+    const user = await User.findOne({
+      'subscription.stripeCustomerId': customerId
+    });
+    
+    if (user) {
+      // Activer l'abonnement
+      user.subscription.isActive = true;
+      user.subscription.status = 'active';
+      user.subscription.plan = 'premium';
+      user.subscription.currentPeriodStart = new Date();
+      user.subscription.currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      
+      await user.save();
+      
+      console.log('✅ Abonnement activé pour:', user.email);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Subscription activated via webhook simulation'
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Webhook simulation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Webhook simulation failed'
+    });
+  }
+};
+
 // Fonctions de traitement des événements
 async function handleCheckoutCompleted(session) {
   console.log('✅ Checkout complété:', session.id);
@@ -225,5 +269,6 @@ async function handlePaymentFailed(invoice) {
 
 module.exports = {
   handleStripeWebhook,
-  simulatePayment
+  simulatePayment,
+  simulateStripeWebhook // ✅ Nouveau
 };
