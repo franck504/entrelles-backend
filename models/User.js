@@ -144,7 +144,7 @@ const userSchema = new mongoose.Schema({
     },
     status: {
       type: String,
-      enum: ['active', 'inactive', 'cancelled', 'expired', 'past_due'],
+      enum: ['active', 'inactive', 'cancelled', 'expired', 'past_due', 'none'],
       default: 'inactive'
     },
     stripeCustomerId: String,

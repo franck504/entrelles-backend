@@ -104,16 +104,17 @@ const simulatePayment = async (req, res) => {
       });
     }
 
-    // Simuler un abonnement actif
+    // ✅ CORRECTION : Simuler un abonnement actif avec statut valide
     user.subscription = {
       isActive: true,
       plan: 'premium',
-      status: 'active',
+      status: 'active', // ✅ Statut valide au lieu de 'none'
       stripeCustomerId: user.subscription?.stripeCustomerId || 'cus_simulated',
       stripeSubscriptionId: 'sub_simulated_' + Date.now(),
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 jours
-      cancelAtPeriodEnd: false
+      cancelAtPeriodEnd: false,
+      lastPaymentStatus: 'succeeded' // ✅ Ajouter le statut de paiement
     };
 
     await user.save();

@@ -132,7 +132,7 @@ const getSubscriptionStatus = async (req, res) => {
     // ✅ AMÉLIORATION : Vérifier d'abord la base de données locale
     let subscriptionData = {
       hasActiveSubscription: user.subscription?.isActive || false,
-      status: user.subscription?.status || 'none',
+      status: user.subscription?.status || 'inactive',
       plan: user.subscription?.plan || 'free',
       currentPeriodStart: user.subscription?.currentPeriodStart || null,
       currentPeriodEnd: user.subscription?.currentPeriodEnd || null,
@@ -156,11 +156,13 @@ const getSubscriptionStatus = async (req, res) => {
             plan: stripeStatus.hasActiveSubscription ? 'premium' : 'free'
           };
           
+          const validStatus = stripeStatus.status === 'none' ? 'inactive' : stripeStatus.status;
+          
           // Mettre à jour la base de données
           user.subscription = {
             ...user.subscription,
             isActive: stripeStatus.hasActiveSubscription,
-            status: stripeStatus.status,
+            status: validStatus,
             plan: stripeStatus.hasActiveSubscription ? 'premium' : 'free',
             currentPeriodStart: stripeStatus.currentPeriodStart,
             currentPeriodEnd: stripeStatus.currentPeriodEnd,

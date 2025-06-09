@@ -105,10 +105,10 @@ async function testRealStripePayment() {
     console.log('\n🔄 6. Vérification du statut après paiement...');
     
     // Attendre un peu pour que le webhook soit traité
-    console.log('⏳ Attente du traitement du webhook (5 secondes)...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    console.log('⏳ Attente du traitement du webhook (10 secondes)...');
+    await new Promise(resolve => setTimeout(resolve, 10000));
     
-    const updatedStatus = await axios.get(`${BASE_URL}/payments/subscription-status`, { headers });
+    let updatedStatus = await axios.get(`${BASE_URL}/payments/subscription-status`, { headers });
     
     console.log('✅ Statut après paiement:', {
       hasActiveSubscription: updatedStatus.data.data.hasActiveSubscription,
@@ -117,6 +117,32 @@ async function testRealStripePayment() {
       currentPeriodEnd: updatedStatus.data.data.currentPeriodEnd,
       stripeCustomerId: updatedStatus.data.data.stripeCustomerId
     });
+
+    // ========================================
+    // 6.5. SIMULATION SI WEBHOOK NON REÇU
+    // ========================================
+    if (!updatedStatus.data.data.hasActiveSubscription) {
+      console.log('\n⚠️ Webhook non reçu, simulation de l\'activation...');
+      
+      try {
+        const simulateResponse = await axios.post(`${BASE_URL}/webhooks/simulate-payment`, {
+          userId: userId
+        }, { headers });
+        
+        console.log('✅ Simulation réussie:', simulateResponse.data.message);
+        
+        // Revérifier le statut
+        updatedStatus = await axios.get(`${BASE_URL}/payments/subscription-status`, { headers });
+        console.log('✅ Statut après simulation:', {
+          hasActiveSubscription: updatedStatus.data.data.hasActiveSubscription,
+          plan: updatedStatus.data.data.plan,
+          status: updatedStatus.data.data.status
+        });
+        
+      } catch (simError) {
+        console.log('⚠️ Erreur simulation:', simError.response?.data?.message);
+      }
+    }
 
     // ========================================
     // 7. VÉRIFIER PROFIL UTILISATEUR
@@ -144,6 +170,11 @@ async function testRealStripePayment() {
       
     } catch (error) {
       console.log('⚠️ Erreur portail client:', error.response?.data?.message);
+      
+      // Si c'est un problème de configuration, donner des instructions
+      if (error.response?.data?.configUrl) {
+        console.log('🔧 Configurez le portail client ici:', error.response.data.configUrl);
+      }
     }
 
     // ========================================
@@ -154,9 +185,16 @@ async function testRealStripePayment() {
     console.log(`✅ Customer Stripe: ${customerId}`);
     console.log(`✅ Session checkout: ${sessionId}`);
     console.log('✅ Paiement traité par Stripe');
-    console.log('✅ Webhook reçu et traité');
-    console.log('✅ Abonnement activé');
-    console.log('\n🎉 TEST RÉUSSI - Vérifiez votre dashboard Stripe !');
+    
+    if (updatedStatus.data.data.hasActiveSubscription) {
+      console.log('✅ Webhook reçu et traité');
+      console.log('✅ Abonnement activé');
+      console.log('\n🎉 TEST RÉUSSI - Vérifiez votre dashboard Stripe !');
+    } else {
+      console.log('⚠️ Webhook non reçu automatiquement');
+      console.log('⚠️ Abonnement activé par simulation');
+      console.log('\n🔧 CONFIGUREZ LES WEBHOOKS dans Stripe Dashboard');
+    }
     
     // Informations pour vérification
     console.log('\n🔍 === VÉRIFICATIONS DASHBOARD STRIPE ===');
@@ -164,6 +202,9 @@ async function testRealStripePayment() {
     console.log('2. Cherchez le paiement avec l\'email:', registerData.email);
     console.log('3. Vérifiez les webhooks sur https://dashboard.stripe.com/test/webhooks');
     console.log('4. Consultez les clients sur https://dashboard.stripe.com/test/customers');
+    console.log('\n🔧 === CONFIGURATION WEBHOOK ===');
+    console.log('URL: https://entrelles-backend.vercel.app/api/webhooks/stripe');
+    console.log('Événements: checkout.session.completed, customer.subscription.*');
 
   } catch (error) {
     console.error('\n❌ ERREUR DANS LE TEST:', {

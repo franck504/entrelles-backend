@@ -80,26 +80,28 @@ class StripeService {
     }
   }
 
-  // ✅ AMÉLIORATION : Créer un portail client avec gestion d'erreur
+  // ✅ AMÉLIORATION : Créer un portail client avec gestion d'erreur améliorée
   async createPortalSession(customerId) {
     try {
-      // Vérifier d'abord si le customer existe et a des abonnements
+      // Vérifier d'abord si le customer existe
       const customer = await stripe.customers.retrieve(customerId);
       if (!customer) {
         throw new Error('Customer not found');
       }
 
-      // Vérifier s'il y a des abonnements
+      // Vérifier s'il y a des abonnements ACTIFS
       const subscriptions = await stripe.subscriptions.list({
         customer: customerId,
+        status: 'active',
         limit: 1
       });
 
       if (subscriptions.data.length === 0) {
-        console.log('⚠️ Aucun abonnement trouvé pour ce client');
+        console.log('⚠️ Aucun abonnement actif trouvé pour ce client');
         return {
           url: null,
-          message: 'No active subscription found. Customer portal not available.'
+          message: 'No active subscription found. Customer portal not available.',
+          hasActiveSubscription: false
         };
       }
 
@@ -110,7 +112,8 @@ class StripeService {
 
       return {
         url: session.url,
-        message: 'Portal session created successfully'
+        message: 'Portal session created successfully',
+        hasActiveSubscription: true
       };
     } catch (error) {
       console.error('Error creating portal session:', error);
