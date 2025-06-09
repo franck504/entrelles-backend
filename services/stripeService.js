@@ -24,12 +24,38 @@ class StripeService {
   // Créer une session de checkout (sans redirection)
   async createCheckoutSession(customerId, priceId) {
     try {
+      // ✅ VÉRIFICATION : Tester si le prix existe
+      let validPriceId = priceId;
+      
+      try {
+        await stripe.prices.retrieve(priceId);
+        console.log('✅ Prix existant trouvé:', priceId);
+      } catch (priceError) {
+        console.log('⚠️ Prix non trouvé, création automatique...');
+        
+        // Créer un produit et prix automatiquement
+        const product = await stripe.products.create({
+          name: 'Entrelles Premium',
+          description: 'Abonnement premium Entrelles'
+        });
+        
+        const price = await stripe.prices.create({
+          unit_amount: 999, // 9.99€
+          currency: 'eur',
+          recurring: { interval: 'month' },
+          product: product.id
+        });
+        
+        validPriceId = price.id;
+        console.log('✅ Nouveau prix créé:', validPriceId);
+      }
+
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
         line_items: [
           {
-            price: priceId,
+            price: validPriceId, // Utiliser le prix valide
             quantity: 1,
           },
         ],
@@ -45,7 +71,8 @@ class StripeService {
       return {
         sessionId: session.id,
         url: session.url,
-        customerId: customerId
+        customerId: customerId,
+        priceId: validPriceId // Retourner le prix utilisé
       };
     } catch (error) {
       console.error('Error creating checkout session:', error);
