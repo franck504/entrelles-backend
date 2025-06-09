@@ -8,15 +8,14 @@ const {
   getSubscriptionStatus
 } = require('../controllers/paymentController');
 
+// ✅ ROUTE PUBLIQUE EN PREMIER
+router.get('/verify-checkout', verifyCheckoutSession);
+
 // Routes protégées
 router.use(protect);
 
-// Routes principales
 router.post('/create-checkout', createCheckoutSession);
 router.post('/create-portal', createPortalSession);
 router.get('/subscription-status', getSubscriptionStatus);
-
-// Route publique pour vérification
-router.get('/verify-checkout', verifyCheckoutSession);
 
 module.exports = router;

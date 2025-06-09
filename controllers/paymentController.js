@@ -76,21 +76,27 @@ const verifyCheckoutSession = async (req, res) => {
 
     console.log('🔍 Vérification session:', sessionId);
 
-    // Récupérer la session Stripe avec détails
-    const session = await stripeService.stripe.checkout.sessions.retrieve(sessionId, {
+    // Utiliser l'instance Stripe du service
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['subscription', 'customer']
     });
 
     console.log('📊 Session Stripe:', {
       id: session.id,
       payment_status: session.payment_status,
-      customer: session.customer?.id
+      customer: session.customer?.id || session.customer
     });
 
     if (session.payment_status === 'paid') {
       // Trouver l'utilisateur par customer ID
+      const customerId = typeof session.customer === 'string' 
+        ? session.customer 
+        : session.customer?.id;
+
       const user = await User.findOne({
-        'subscription.stripeCustomerId': session.customer.id
+        'subscription.stripeCustomerId': customerId
       });
 
       if (user) {
@@ -102,7 +108,7 @@ const verifyCheckoutSession = async (req, res) => {
           isActive: true,
           status: 'active',
           plan: 'premium',
-          stripeSubscriptionId: session.subscription?.id,
+          stripeSubscriptionId: session.subscription?.id || session.subscription,
           currentPeriodStart: session.subscription ? 
             new Date(session.subscription.current_period_start * 1000) : new Date(),
           currentPeriodEnd: session.subscription ? 
@@ -125,7 +131,7 @@ const verifyCheckoutSession = async (req, res) => {
           }
         });
       } else {
-        console.log('⚠️ Utilisateur non trouvé pour customer:', session.customer.id);
+        console.log('⚠️ Utilisateur non trouvé pour customer:', customerId);
         res.status(404).json({
           success: false,
           message: 'User not found for this payment'
