@@ -5,14 +5,20 @@ const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
+// Import de la configuration database
+const connectDB = require('./config/database');
+
 const app = express();
+
+// Connexion à la base de données
+connectDB();
 
 // Middleware de sécurité
 app.use(helmet());
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+  origin: process.env.FRONTEND_URL || ['http://localhost:3001', 'https://entrelles.vercel.app'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -35,11 +41,7 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     status: 'active',
     timestamp: new Date().toISOString(),
-    endpoints: {
-      auth: '/api/auth',
-      trips: '/api/trips',
-      bookings: '/api/bookings'
-    }
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
@@ -57,8 +59,10 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/trips', require('./routes/trips'));
 app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/payments', require('./routes/payments'));
+app.use('/api/webhooks', require('./routes/webhooks'));
 
-// Test de base de données
+// Test database route
 app.get('/test-db', async (req, res) => {
   try {
     const mongoose = require('mongoose');
@@ -75,8 +79,7 @@ app.get('/test-db', async (req, res) => {
       message: 'Database connection test',
       status: states[dbState],
       database: mongoose.connection.name,
-      host: mongoose.connection.host,
-      collections: await mongoose.connection.db.listCollections().toArray()
+      host: mongoose.connection.host
     });
   } catch (error) {
     res.status(500).json({
@@ -103,4 +106,16 @@ app.use('*', (req, res) => {
   });
 });
 
-module.exports = app;
+const PORT = process.env.PORT || 3000;
+
+// Pour Vercel, on exporte l'app
+if (process.env.NODE_ENV === 'production') {
+  module.exports = app;
+} else {
+  // Pour le développement local
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 API URL: http://localhost:${PORT}`);
+  });
+}
