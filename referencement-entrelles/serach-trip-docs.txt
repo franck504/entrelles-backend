@@ -1,0 +1,401 @@
+# 🔍 **Endpoint de Recherche de Trajets**
+
+## **GET** `/api/trips/search`
+
+**Description:** Recherche avancée de trajets avec filtres multiples  
+**Type:** Route publique (pas d'authentification requise)  
+**Validation:** `validateSearchTrips`
+
+---
+
+## 📋 **Paramètres de Recherche Complets**
+
+### **URL Complète avec Tous les Paramètres:**
+```
+GET https://entrelles-backend.vercel.app/api/trips/search?departureCity=Paris&arrivalCity=Lyon&departureDate=2024-01-15&passengers=2&maxPrice=50&minPrice=20&maxDuration=300&allowSmoking=false&allowPets=true&allowFood=true&musicPreference=medium&chatLevel=low&minRating=4.0&sortBy=price&sortOrder=asc&page=1&limit=10&radius=50&departureTime=morning&vehicleBrand=Renault&isRecurring=true&daysOfWeek=1,3,5
+```
+
+### **Paramètres Query Détaillés:**
+
+#### **🎯 Paramètres Obligatoires**
+```
+departureCity=Paris          # Ville de départ (string, requis)
+arrivalCity=Lyon            # Ville d'arrivée (string, requis)
+```
+
+#### **📅 Paramètres de Date/Heure**
+```
+departureDate=2024-01-15    # Date de départ (YYYY-MM-DD, requis)
+departureTime=morning       # Créneau horaire (morning|afternoon|evening)
+```
+
+#### **👥 Paramètres de Capacité**
+```
+passengers=2                # Nombre de passagers (number, requis, min: 1, max: 8)
+```
+
+#### **💰 Paramètres de Prix**
+```
+maxPrice=50                 # Prix maximum par personne (number)
+minPrice=20                 # Prix minimum par personne (number)
+```
+
+#### **⏱️ Paramètres de Durée**
+```
+maxDuration=300             # Durée maximum en minutes (number)
+```
+
+#### **🚗 Paramètres de Préférences**
+```
+allowSmoking=false          # Autoriser fumeur (boolean)
+allowPets=true              # Autoriser animaux (boolean)
+allowFood=true              # Autoriser nourriture (boolean)
+musicPreference=medium      # Niveau musique (low|medium|high)
+chatLevel=low               # Niveau discussion (low|medium|high)
+```
+
+#### **⭐ Paramètres de Qualité**
+```
+minRating=4.0               # Note minimum conductrice (number, 1-5)
+```
+
+#### **📍 Paramètres Géographiques**
+```
+radius=50                   # Rayon de recherche en km (number, défaut: 50)
+```
+
+#### **🚙 Paramètres Véhicule**
+```
+vehicleBrand=Renault        # Marque de véhicule (string)
+vehicleColor=Bleu           # Couleur véhicule (string)
+minYear=2018                # Année minimum véhicule (number)
+```
+
+#### **🔄 Paramètres de Récurrence**
+```
+isRecurring=true            # Trajets récurrents uniquement (boolean)
+daysOfWeek=1,3,5           # Jours de la semaine (1=Lundi, 7=Dimanche)
+frequency=weekly            # Fréquence (daily|weekly|monthly)
+```
+
+#### **📊 Paramètres de Tri**
+```
+sortBy=price                # Tri par (price|departureTime|duration|rating|distance)
+sortOrder=asc               # Ordre (asc|desc)
+```
+
+#### **📄 Paramètres de Pagination**
+```
+page=1                      # Page (number, défaut: 1)
+limit=10                    # Limite par page (number, défaut: 10, max: 50)
+```
+
+---
+
+## 📤 **Structure de Réponse Complète**
+
+### **Réponse Success (200):**
+```json
+{
+  "success": true,
+  "message": "Trips found successfully",
+  "data": [
+    {
+      "id": "64f8a1b2c3d4e5f6789012",
+      "departure": {
+        "city": "Paris",
+        "address": "Gare de Lyon, 75012 Paris",
+        "coordinates": {
+          "lat": 48.8566,
+          "lng": 2.3522
+        },
+        "postalCode": "75012"
+      },
+      "arrival": {
+        "city": "Lyon",
+        "address": "Gare de Lyon Part-Dieu, 69003 Lyon",
+        "coordinates": {
+          "lat": 45.7640,
+          "lng": 4.8357
+        },
+        "postalCode": "69003"
+      },
+      "departureDateTime": "2024-01-15T09:00:00.000Z",
+      "estimatedArrivalDateTime": "2024-01-15T13:00:00.000Z",
+      "estimatedDuration": 240,
+      "distance": 462.5,
+      "availableSeats": 3,
+      "totalSeats": 4,
+      "pricePerSeat": 35.00,
+      "currency": "EUR",
+      "status": "active",
+      "driver": {
+        "id": "64f8a1b2c3d4e5f6789013",
+        "displayName": "Marie D.",
+        "firstName": "Marie",
+        "avatar": "https://example.com/avatars/marie.jpg",
+        "rating": 4.8,
+        "totalTrips": 15,
+        "completedTrips": 14,
+        "responseTime": 120,
+        "joinedDate": "2023-03-15T00:00:00.000Z",
+        "verification": {
+          "email": true,
+          "phone": true,
+          "identity": true
+        },
+        "badges": ["experienced_driver", "punctual", "friendly"]
+      },
+      "vehicle": {
+        "brand": "Renault",
+        "model": "Clio",
+        "color": "Bleu",
+        "year": 2020,
+        "licensePlate": "AB-123-CD",
+        "fuelType": "essence",
+        "transmission": "manual",
+        "airConditioning": true,
+        "photos": [
+          "https://example.com/vehicles/clio1.jpg",
+          "https://example.com/vehicles/clio2.jpg"
+        ]
+      },
+      "preferences": {
+        "allowSmoking": false,
+        "allowPets": true,
+        "allowFood": true,
+        "musicPreference": "medium",
+        "chatLevel": "medium",
+        "luggageSpace": "medium",
+        "childSeat": false
+      },
+      "waypoints": [
+        {
+          "city": "Mâcon",
+          "address": "Aire de Mâcon",
+          "coordinates": {
+            "lat": 46.3067,
+            "lng": 4.8333
+          },
+          "stopDuration": 15,
+          "isPickupPoint": true,
+          "isDropoffPoint": true
+        }
+      ],
+      "description": "Trajet régulier Paris-Lyon tous les lundis, mercredis et vendredis. Ambiance détendue, musique douce. Arrêt possible à Mâcon.",
+      "notes": "Départ précis à 9h00 depuis le parvis de la Gare de Lyon. Merci d'être ponctuelle !",
+      "recurrence": {
+        "isRecurring": true,
+        "frequency": "weekly",
+        "daysOfWeek": [1, 3, 5],
+        "startDate": "2024-01-15T00:00:00.000Z",
+        "endDate": "2024-06-30T23:59:59.000Z",
+        "exceptions": [
+          "2024-04-01T00:00:00.000Z",
+          "2024-05-01T00:00:00.000Z"
+        ]
+      },
+      "stats": {
+        "views": 45,
+        "bookingRequests": 8,
+        "confirmedBookings": 6,
+        "completedBookings": 12,
+        "averageRating": 4.9
+      },
+      "policies": {
+        "cancellationPolicy": "flexible",
+        "instantBooking": false,
+        "advanceBooking": 24,
+        "maxPassengers": 3,
+        "petPolicy": "small_pets_only",
+        "smokingPolicy": "no_smoking",
+        "luggagePolicy": "one_bag_per_person"
+      },
+      "pricing": {
+        "basePrice": 35.00,
+        "currency": "EUR",
+        "priceBreakdown": {
+          "fuel": 20.00,
+          "tolls": 10.00,
+          "service": 5.00
+        },
+        "discounts": {
+          "recurringPassenger": 0.10,
+          "earlyBooking": 0.05
+        }
+      },
+      "safety": {
+        "driverVerified": true,
+        "vehicleInsured": true,
+        "emergencyContact": true,
+        "gpsTracking": true
+      },
+      "createdAt": "2024-01-10T10:00:00.000Z",
+      "updatedAt": "2024-01-12T15:30:00.000Z",
+      "publishedAt": "2024-01-10T12:00:00.000Z"
+    },
+    {
+      "id": "64f8a1b2c3d4e5f6789018",
+      "departure": {
+        "city": "Paris",
+        "address": "Porte de Vincennes, 75020 Paris",
+        "coordinates": {
+          "lat": 48.8467,
+          "lng": 2.4099
+        }
+      },
+      "arrival": {
+        "city": "Lyon",
+        "address": "Centre-ville Lyon, 69002 Lyon",
+        "coordinates": {
+          "lat": 45.7578,
+          "lng": 4.8320
+        }
+      },
+      "departureDateTime": "2024-01-15T14:30:00.000Z",
+      "estimatedArrivalDateTime": "2024-01-15T18:45:00.000Z",
+      "estimatedDuration": 255,
+      "distance": 485.2,
+      "availableSeats": 2,
+      "totalSeats": 3,
+      "pricePerSeat": 42.00,
+      "currency": "EUR",
+      "status": "active",
+      "driver": {
+        "id": "64f8a1b2c3d4e5f6789019",
+        "displayName": "Sophie L.",
+        "avatar": "https://example.com/avatars/sophie.jpg",
+        "rating": 4.9,
+        "totalTrips": 28,
+        "completedTrips": 27,
+        "responseTime": 85,
+        "verification": {
+          "email": true,
+          "phone": true,
+          "identity": true
+        }
+      },
+      "vehicle": {
+        "brand": "Peugeot",
+        "model": "308",
+        "color": "Blanc",
+        "year": 2022,
+        "fuelType": "hybrid"
+      },
+      "preferences": {
+        "allowSmoking": false,
+        "allowPets": false,
+        "allowFood": true,
+        "musicPreference": "low",
+        "chatLevel": "high"
+      },
+      "description": "Trajet direct Paris-Lyon, véhicule récent et confortable.",
+      "recurrence": {
+        "isRecurring": false
+      },
+      "stats": {
+        "views": 23,
+        "bookingRequests": 5,
+        "confirmedBookings": 3
+      },
+      "createdAt": "2024-01-11T08:15:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 25,
+    "pages": 3,
+    "hasNext": true,
+    "hasPrev": false,
+    "nextPage": 2,
+    "prevPage": null
+  },
+  "filters": {
+    "applied": {
+      "departureCity": "Paris",
+      "arrivalCity": "Lyon",
+      "departureDate": "2024-01-15",
+      "passengers": 2,
+      "maxPrice": 50,
+      "allowPets": true
+    },
+    "available": {
+      "priceRange": {
+        "min": 25.00,
+        "max": 65.00
+      },
+      "durationRange": {
+        "min": 180,
+        "max": 320
+      },
+      "vehicleBrands": ["Renault", "Peugeot", "Citroën", "Volkswagen"],
+      "departureTimeSlots": ["morning", "afternoon", "evening"]
+    }
+  },
+  "suggestions": {
+    "alternativeDates": [
+      {
+        "date": "2024-01-16",
+        "tripCount": 8,
+        "avgPrice": 38.50
+      },
+      {
+        "date": "2024-01-17",
+        "tripCount": 12,
+        "avgPrice": 35.00
+      }
+    ],
+    "nearbyDepartures": [
+      {
+        "city": "Boulogne-Billancourt",
+        "distance": 8.5,
+        "tripCount": 3
+      }
+    ],
+    "nearbyArrivals": [
+      {
+        "city": "Villeurbanne",
+        "distance": 5.2,
+        "tripCount": 5
+      }
+    ]
+  },
+  "metadata": {
+    "searchId": "search_64f8a1b2c3d4e5f6789020",
+    "executionTime": 145,
+    "cacheHit": false,
+    "searchRadius": 50,
+    "totalAvailableSeats": 18
+  }
+}
+```
+
+---
+
+## 🔍 **Exemples d'Utilisation**
+
+### **1. Recherche Simple**
+```
+GET /api/trips/search?departureCity=Paris&arrivalCity=Lyon&departureDate=2024-01-15&passengers=1
+```
+
+### **2. Recherche avec Filtres Prix**
+```
+GET /api/trips/search?departureCity=Paris&arrivalCity=Lyon&departureDate=2024-01-15&passengers=2&maxPrice=40&minPrice=25
+```
+
+### **3. Recherche avec Préférences**
+```
+GET /api/trips/search?departureCity=Paris&arrivalCity=Lyon&departureDate=2024-01-15&passengers=1&allowPets=true&allowSmoking=false&musicPreference=low
+```
+
+### **4. Recherche Trajets Récurrents**
+```
+GET /api/trips/search?departureCity=Paris&arrivalCity=Lyon&departureDate=2024-01-15&passengers=1&isRecurring=true&daysOfWeek=1,3,5
+```
+
+### **5. Recherche avec Tri et Pagination**
+```
+GET /api/trips/search?departureCity=Paris&arrivalCity=Lyon&departureDate=2
+```

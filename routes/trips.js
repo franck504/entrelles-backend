@@ -112,7 +112,78 @@ const validateCreateTrip = [
   handleValidationErrors
 ];
 
-// Validation pour la recherche de trajets
+// ✅ NOUVELLE VALIDATION POUR RECHERCHE DYNAMIQUE
+const validateSearchTripsFlexible = [
+  query('departureCity')
+    .optional()
+    .trim()
+    .isLength({ min: 2 })
+    .withMessage('Departure city must be at least 2 characters'),
+    
+  query('arrivalCity')
+    .optional()
+    .trim()
+    .isLength({ min: 2 })
+    .withMessage('Arrival city must be at least 2 characters'),
+    
+  query('departureDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Valid departure date is required'),
+    
+  query('passengers')
+    .optional()
+    .isInt({ min: 1, max: 7 })
+    .withMessage('Passengers must be between 1 and 7'),
+    
+  query('maxPrice')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Max price must be a positive number'),
+    
+  query('minPrice')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Min price must be a positive number'),
+    
+  query('maxDuration')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Max duration must be a positive number'),
+    
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer'),
+    
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 50 })
+    .withMessage('Limit must be between 1 and 50'),
+    
+  // ✅ Validation personnalisée : au moins un critère
+  (req, res, next) => {
+    const { departureCity, arrivalCity, departureDate } = req.query;
+    
+    if (!departureCity && !arrivalCity && !departureDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Au moins un critère de recherche est requis',
+        errors: [{
+          field: 'search',
+          message: 'Veuillez spécifier au moins une ville de départ, d\'arrivée ou une date',
+          value: null
+        }]
+      });
+    }
+    
+    next();
+  },
+    
+  handleValidationErrors
+];
+
+// Validation pour la recherche de trajets (ANCIENNE - gardée pour compatibilité)
 const validateSearchTrips = [
   query('departureCity')
     .notEmpty()
@@ -190,7 +261,12 @@ const validateUpdateTrip = [
 ];
 
 // Routes publiques
-router.get('/search', validateSearchTrips, searchTrips);
+// ✅ NOUVELLE ROUTE - Recherche flexible pour Flutter
+router.get('/search', validateSearchTripsFlexible, searchTrips);
+
+// ✅ ANCIENNE ROUTE - Recherche stricte (gardée pour compatibilité)
+router.get('/search-strict', validateSearchTrips, searchTrips);
+
 router.get('/popular', getPopularTrips);
 router.get('/:id', getTripById);
 

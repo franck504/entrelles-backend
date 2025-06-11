@@ -1,0 +1,345 @@
+[
+  {
+    "_id": "68488ebb7771667ec92ed167",
+    "driver": "68488eb87771667ec92ed14e",
+    "departure": {
+      "city": "Paris",
+      "address": "Gare du Nord, 75010 Paris",
+      "coordinates": { "lat": 48.8809, "lng": 2.3553 },
+      "postalCode": "75010"
+    },
+    "arrival": {
+      "city": "Lyon",
+      "address": "Gare Part-Dieu, 69003 Lyon",
+      "coordinates": { "lat": 45.7603, "lng": 4.8584 },
+      "postalCode": "69003"
+    },
+    "departureDateTime": "2025-06-11T19:59:50.229Z",
+    "estimatedArrivalDateTime": "2025-06-12T00:29:50.229Z",
+    "availableSeats": 3,
+    "totalSeats": 3,
+    "pricePerSeat": 25,
+    "vehicle": {
+      "brand": "Renault",
+      "model": "Clio",
+      "color": "Rouge",
+      "licensePlate": "AB-123-CD",
+      "year": 2020
+    },
+    "preferences": {
+      "allowSmoking": false,
+      "allowPets": false,
+      "allowFood": true,
+      "musicPreference": "medium",
+      "chatLevel": "normal",
+      "maxDetour": 10
+    },
+    "description": "Trajet Paris-Lyon, départ matinal",
+    "status": "active",
+    "isRecurring": false,
+    "recurrence": { "daysOfWeek": [] },
+    "distance": 465,
+    "estimatedDuration": 270,
+    "stats": { "views": 9, "bookingRequests": 0 },
+    "isVerified": false,
+    "waypoints": [],
+    "moderationFlags": [],
+    "createdAt": "2025-06-10T19:59:55.969Z",
+    "updatedAt": "2025-06-11T02:31:23.132Z",
+    "__v": 0
+  },
+  {
+    "_id": "68488ebc7771667ec92ed16b",
+    "driver": "68488eba7771667ec92ed15f",
+    "departure": {
+      "city": "Lyon",
+      "address": "Gare Part-Dieu, 69003 Lyon",
+      "coordinates": { "lat": 45.7603, "lng": 4.8584 },
+      "postalCode": "69003"
+    },
+    "arrival": {
+      "city": "Marseille",
+      "address": "Gare Saint-Charles, 13001 Marseille",
+      "coordinates": { "lat": 43.3026, "lng": 5.3811 },
+      "postalCode": "13001"
+    },
+    "departureDateTime": "2025-06-12T19:59:50.238Z",
+    "estimatedArrivalDateTime": "2025-06-12T22:59:50.238Z",
+    "availableSeats": 2,
+    "totalSeats": 2,
+    "pricePerSeat": 20,
+    "vehicle": {
+      "brand": "Peugeot",
+      "model": "308",
+      "color": "Bleu",
+      "licensePlate": "CD-456-EF",
+      "year": 2021
+    },
+    "preferences": {
+      "allowSmoking": false,
+      "allowPets": false,
+      "allowFood": true,
+      "musicPreference": "medium",
+      "chatLevel": "normal",
+      "maxDetour": 10
+    },
+    "description": "Trajet Lyon-Marseille, après-midi",
+    "status": "active",
+    "isRecurring": false,
+    "recurrence": { "daysOfWeek": [] },
+    "distance": 315,
+    "estimatedDuration": 180,
+    "stats": { "views": 0, "bookingRequests": 0 },
+    "isVerified": false,
+    "waypoints": [],
+    "moderationFlags": [],
+    "createdAt": "2025-06-10T19:59:56.597Z",
+    "updatedAt": "2025-06-10T19:59:56.597Z",
+    "__v": 0
+  },
+  {
+    "_id": "68488ebd7771667ec92ed16f",
+    "driver": "68488ebb7771667ec92ed163",
+    "departure": {
+      "city": "Paris",
+      "address": "Châtelet-Les Halles, 75001 Paris",
+      "coordinates": { "lat": 48.8619, "lng": 2.3467 },
+      "postalCode": "75001"
+    },
+    "arrival": {
+      "city": "Toulouse",
+      "address": "Gare Matabiau, 31000 Toulouse",
+      "coordinates": { "lat": 43.6108, "lng": 1.4538 },
+      "postalCode": "31000"
+    },
+    "departureDateTime": "2025-06-13T19:59:50.238Z",
+    "estimatedArrivalDateTime": "2025-06-14T01:59:50.238Z",
+    "availableSeats": 4,
+    "totalSeats": 4,
+    "pricePerSeat": 35,
+    "vehicle": {
+      "brand": "Citroën",
+      "model": "C4",
+      "color": "Blanc",
+      "licensePlate": "EF-789-GH",
+      "year": 2019
+    },
+    "preferences": {
+      "allowSmoking": false,
+      "allowPets": false,
+      "allowFood": true,
+      "musicPreference": "medium",
+      "chatLevel": "normal",
+      "maxDetour": 10
+    },
+    "description": "Trajet Paris-Toulouse, longue distance",
+    "status": "active",
+    "isRecurring": false,
+    "recurrence": { "daysOfWeek": [] },
+    "distance": 678,
+    "estimatedDuration": 360,
+    "stats": { "views": 0, "bookingRequests": 0 },
+    "isVerified": false,
+    "waypoints": [],
+    "moderationFlags": [],
+    "createdAt": "2025-06-10T19:59:57.357Z",
+    "updatedAt": "2025-06-10T19:59:57.357Z",
+    "__v": 0
+  },
+  {
+    "_id": "68488ebe7771667ec92ed173",
+    "driver": "68488eb87771667ec92ed14e",
+    "departure": {
+      "city": "Marseille", 
+      "address": "Vieux-Port, 13001 Marseille",
+      "coordinates": { "lat": 43.2965, "lng": 5.3698 },
+      "postalCode": "13001"
+    },
+    "arrival": {
+      "city": "Nice",
+      "address": "Gare de Nice-Ville, 06000 Nice",
+      "coordinates": { "lat": 43.7034, "lng": 7.2663 },
+      "postalCode": "06000"
+    },
+    "departureDateTime": "2025-06-14T19:59:50.238Z",
+    "estimatedArrivalDateTime": "2025-06-14T22:29:50.238Z",
+    "availableSeats": 1,
+    "totalSeats": 1,
+    "pricePerSeat": 18,
+    "vehicle": {
+      "brand": "Volkswagen",
+      "model": "Golf",
+      "color": "Gris",
+      "licensePlate": "GH-012-IJ",
+      "year": 2022
+    },
+    "preferences": {
+      "allowSmoking": false,
+      "allowPets": false,
+      "allowFood": true,
+      "musicPreference": "medium",
+      "chatLevel": "normal",
+      "maxDetour": 10
+    },
+    "description": "Trajet Marseille-Nice, côte d'Azur",
+    "status": "active",
+    "isRecurring": false,
+    "recurrence": { "daysOfWeek": [] },
+    "distance": 200,
+    "estimatedDuration": 150,
+    "stats": { "views": 0, "bookingRequests": 0 },
+    "isVerified": false,
+    "waypoints": [],
+    "moderationFlags": [],
+    "createdAt": "2025-06-10T19:59:58.286Z",
+    "updatedAt": "2025-06-10T19:59:58.286Z",
+    "__v": 0
+  },
+  {
+    "_id": "68488ebe7771667ec92ed177",
+    "driver": "68488eba7771667ec92ed15f",
+    "departure": {
+      "city": "Lyon",
+      "address": "Bellecour, 69002 Lyon",
+      "coordinates": { "lat": 45.7578, "lng": 4.832 },
+      "postalCode": "69002"
+    },
+    "arrival": {
+      "city": "Paris",
+      "address": "Gare de Lyon, 75012 Paris",
+      "coordinates": { "lat": 48.8447, "lng": 2.3743 },
+      "postalCode": "75012"
+    },
+    "departureDateTime": "2025-06-15T19:59:50.238Z",
+    "estimatedArrivalDateTime": "2025-06-16T00:39:50.238Z",
+    "availableSeats": 2,
+    "totalSeats": 2,
+    "pricePerSeat": 28,
+    "vehicle": {
+      "brand": "Audi",
+      "model": "A3",
+      "color": "Noir",
+      "licensePlate": "IJ-345-KL",
+      "year": 2020
+    },
+    "preferences": {
+      "allowSmoking": false,
+      "allowPets": false,
+      "allowFood": true,
+      "musicPreference": "medium",
+      "chatLevel": "normal",
+      "maxDetour": 10
+    },
+    "description": "Retour Lyon-Paris, soirée",
+    "status": "active",
+    "isRecurring": false,
+    "recurrence": { "daysOfWeek": [] },
+    "distance": 465,
+    "estimatedDuration": 280,
+    "stats": { "views": 0, "bookingRequests": 0 },
+    "isVerified": false,
+    "waypoints": [],
+    "moderationFlags": [],
+    "createdAt": "2025-06-10T19:59:58.954Z",
+    "updatedAt": "2025-06-10T19:59:58.954Z",
+    "__v": 0
+  },
+  {
+    "_id": "68488ebf7771667ec92ed17b",
+    "driver": "68488ebb7771667ec92ed163",
+    "departure": {
+      "city": "Toulouse",
+      "address": "Capitole, 31000 Toulouse",
+      "coordinates": { "lat": 43.6043, "lng": 1.4437 },
+      "postalCode": "31000"
+    },
+    "arrival": {
+      "city": "Bordeaux",
+      "address": "Gare Saint-Jean, 33000 Bordeaux",
+      "coordinates": { "lat": 44.8262, "lng": -0.556 },
+      "postalCode": "33000"
+    },
+    "departureDateTime": "2025-06-16T19:59:50.238Z",
+    "estimatedArrivalDateTime": "2025-06-16T21:59:50.238Z",
+    "availableSeats": 3,
+    "totalSeats": 3,
+    "pricePerSeat": 15,
+    "vehicle": {
+      "brand": "Ford",
+      "model": "Focus",
+      "color": "Rouge",
+      "licensePlate": "KL-678-MN",
+      "year": 2021
+    },
+    "preferences": {
+      "allowSmoking": false,
+      "allowPets": false,
+      "allowFood": true,
+      "musicPreference": "medium",
+      "chatLevel": "normal",
+      "maxDetour": 10
+    },
+    "description": "Trajet Toulouse-Bordeaux, matinée",
+    "status": "active",
+    "isRecurring": false,
+    "recurrence": { "daysOfWeek": [] },
+    "distance": 245,
+    "estimatedDuration": 120,
+    "stats": { "views": 0, "bookingRequests": 0 },
+    "isVerified": false,
+    "waypoints": [],
+    "moderationFlags": [],
+    "createdAt": "2025-06-10T19:59:59.580Z",
+    "updatedAt": "2025-06-10T19:59:59.580Z",
+    "__v": 0
+  },
+  {
+    "_id": "68488ec07771667ec92ed17f",
+    "driver": "68488eb87771667ec92ed14e",
+    "departure": {
+      "city": "Paris",
+      "address": "République, 75003 Paris",
+      "coordinates": { "lat": 48.8676, "lng": 2.3631 },
+      "postalCode": "75003"
+    },
+    "arrival": {
+      "city": "Nantes",
+      "address": "Gare de Nantes, 44000 Nantes",
+      "coordinates": { "lat": 47.2173, "lng": -1.5534 },
+      "postalCode": "44000"
+    },
+    "departureDateTime": "2025-06-17T19:59:50.238Z",
+    "estimatedArrivalDateTime": "2025-06-17T23:29:50.238Z",
+    "availableSeats": 2,
+    "totalSeats": 2,
+    "pricePerSeat": 22,
+    "vehicle": {
+      "brand": "Opel",
+      "model": "Corsa",
+      "color": "Vert",
+      "licensePlate": "MN-901-OP",
+      "year": 2019
+    },
+    "preferences": {
+      "allowSmoking": false,
+      "allowPets": false,
+      "allowFood": true,
+      "musicPreference": "medium",
+      "chatLevel": "normal",
+      "maxDetour": 10
+    },
+    "description": "Trajet Paris-Nantes, week-end",
+    "status": "active",
+    "isRecurring": false,
+    "recurrence": { "daysOfWeek": [] },
+    "distance": 385,
+    "estimatedDuration": 210,
+    "stats": { "views": 0, "bookingRequests": 0 },
+    "isVerified": false,
+    "waypoints": [],
+    "moderationFlags": [],
+    "createdAt": "2025-06-10T19:59:60.206Z",
+    "updatedAt": "2025-06-10T19:59:60.206Z",
+    "__v": 0
+  }
+]

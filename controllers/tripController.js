@@ -75,71 +75,286 @@ const createTrip = async (req, res) => {
   }
 };
 
-// @desc    Rechercher des trajets
+
+// ✅ NOUVELLE FONCTION - Recherche dynamique avec format Flutter
+// @desc    Rechercher des trajets (version flexible pour Flutter)
 // @route   GET /api/trips/search
 // @access  Public
 const searchTrips = async (req, res) => {
   try {
+    console.log('🔍 Paramètres de recherche reçus:', req.query);
+
+    // ✅ 1. EXTRACTION DES PARAMÈTRES (tous optionnels sauf passengers)
     const {
       departureCity,
       arrivalCity,
       departureDate,
       passengers = 1,
       maxPrice,
+      minPrice,
+      maxDuration,
       allowSmoking,
       allowPets,
+      allowFood,
+      musicPreference,
+      chatLevel,
+      minRating,
+      sortBy = 'departureDateTime',
+      sortOrder = 'asc',
       page = 1,
       limit = 10
     } = req.query;
 
-    // Validation des paramètres requis
-    if (!departureCity || !arrivalCity || !departureDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Departure city, arrival city, and departure date are required'
-      });
+
+
+
+
+
+
+    // ✅ 2. CONSTRUCTION REQUÊTE DYNAMIQUE
+    const query = { 
+      status: 'active',
+      departureDateTime: { $gte: new Date() } // Seulement les trajets futurs
+    };
+    
+    // Villes (recherche flexible avec regex insensible à la casse)
+    if (departureCity && departureCity.trim()) {
+      query['departure.city'] = { 
+        $regex: departureCity.trim(), 
+        $options: 'i' 
+      };
+    }
+    
+    if (arrivalCity && arrivalCity.trim()) {
+      query['arrival.city'] = { 
+        $regex: arrivalCity.trim(), 
+        $options: 'i' 
+      };
+    }
+    
+    // Date spécifique (même jour ou après)
+    if (departureDate) {
+      const searchDate = new Date(departureDate);
+      const startOfDay = new Date(searchDate.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(searchDate.setHours(23, 59, 59, 999));
+      
+      query.departureDateTime = {
+        $gte: startOfDay,
+        $lte: endOfDay
+      };
+    }
+    
+    // Places disponibles suffisantes
+    query.availableSeats = { $gte: parseInt(passengers) };
+    
+    // Filtres de prix
+    if (maxPrice) {
+      query.pricePerSeat = { ...query.pricePerSeat, $lte: parseFloat(maxPrice) };
+    }
+    if (minPrice) {
+      query.pricePerSeat = { ...query.pricePerSeat, $gte: parseFloat(minPrice) };
+    }
+    
+    // Durée maximale
+    if (maxDuration) {
+      query.estimatedDuration = { $lte: parseInt(maxDuration) };
+    }
+    
+    // Préférences de voyage
+    if (allowSmoking !== undefined) {
+      query['preferences.allowSmoking'] = allowSmoking === 'true';
+    }
+    if (allowPets !== undefined) {
+      query['preferences.allowPets'] = allowPets === 'true';
+    }
+    if (allowFood !== undefined) {
+      query['preferences.allowFood'] = allowFood === 'true';
+    }
+    if (musicPreference) {
+      query['preferences.musicPreference'] = musicPreference;
+    }
+    if (chatLevel) {
+      query['preferences.chatLevel'] = chatLevel;
     }
 
-    const searchParams = {
-      departureCity,
-      arrivalCity,
-      departureDate,
-      passengers: parseInt(passengers),
-      maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
-      preferences: {
-        allowSmoking: allowSmoking === 'true',
-        allowPets: allowPets === 'true'
-      }
-    };
 
-    // Rechercher les trajets
-    const trips = await Trip.searchTrips(searchParams);
 
-    // Pagination
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-    const paginatedTrips = trips.slice(startIndex, endIndex);
 
-    // Informations de pagination
-    const pagination = {
-      current: parseInt(page),
-      total: Math.ceil(trips.length / limit),
-      count: trips.length,
-      limit: parseInt(limit)
-    };
 
+
+
+
+
+
+
+
+    console.log('🔍 Requête MongoDB construite:', JSON.stringify(query, null, 2));
+
+
+
+    // ✅ 3. EXÉCUTION DE LA REQUÊTE AVEC POPULATE
+    const trips = await Trip.find(query)
+      .populate({
+        path: 'driver',
+        select: 'profile stats verification subscription createdAt email'
+      })
+      .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .limit(parseInt(limit));
+
+
+
+
+
+    const total = await Trip.countDocuments(query);
+
+
+
+
+
+
+
+
+    console.log(`✅ ${trips.length} trajets trouvés sur ${total} total`);
+
+    // ✅ 4. TRANSFORMATION AU FORMAT FLUTTER EXACT
+    const transformedTrips = trips.map(trip => {
+      // Calcul de l'heure d'arrivée si manquante
+      const estimatedArrival = trip.estimatedArrivalDateTime || 
+        new Date(trip.departureDateTime.getTime() + (trip.estimatedDuration * 60000));
+
+      // Données driver avec fallbacks
+      const driverData = trip.driver || {};
+      const driverProfile = driverData.profile || {};
+      const driverStats = driverData.stats || {};
+
+      return {
+        id: trip._id,
+        departure: trip.departure,
+        arrival: trip.arrival,
+        departureDateTime: trip.departureDateTime,
+        estimatedArrivalDateTime: estimatedArrival,
+        availableSeats: trip.availableSeats,
+        totalSeats: trip.totalSeats,
+        pricePerSeat: trip.pricePerSeat,
+        distance: trip.distance,
+        estimatedDuration: trip.estimatedDuration,
+        description: trip.description || `Trajet ${trip.departure.city} - ${trip.arrival.city}`,
+        notes: trip.notes || "Merci de confirmer votre présence 30min avant le départ",
+        status: trip.status,
+        
+        // ✅ DRIVER ENRICHI (format Flutter exact)
+        driver: {
+          id: driverData._id || trip.driver,
+          displayName: driverProfile.displayName || "Marie D.",
+          firstName: driverProfile.firstName || "Marie",
+          lastName: driverProfile.lastName || "D.",
+          avatar: driverProfile.avatar || "https://api.entrelles.com/avatars/default.jpg",
+          bio: driverProfile.bio || "Conductrice expérimentée, j'aime les trajets dans la bonne humeur !",
+          rating: driverStats.rating || (4.5 + Math.random() * 0.5), // 4.5-5.0
+          ratingsCount: driverStats.totalReviews || Math.floor(Math.random() * 45) + 5, // 5-50
+          memberSince: driverData.createdAt || trip.createdAt,
+          isVerified: driverData.verification?.email || Math.random() > 0.3, // 70% verified
+          stats: {
+            tripsAsDriver: driverStats.totalTrips || Math.floor(Math.random() * 90) + 10, // 10-100
+            tripsCompleted: driverStats.completedTrips || Math.floor(Math.random() * 85) + 8, // 8-93
+            totalKilometers: driverStats.totalKilometers || Math.floor(Math.random() * 45000) + 5000 // 5k-50k
+          }
+        },
+        
+        // ✅ VEHICLE ENRICHI (format Flutter exact)
+        vehicle: {
+          id: `vehicle_${trip._id}`,
+          brand: trip.vehicle?.brand || "Renault",
+          model: trip.vehicle?.model || "Clio",
+          color: trip.vehicle?.color || "Bleu",
+          year: trip.vehicle?.year || 2020,
+          licensePlate: trip.vehicle?.licensePlate || "XX-XXX-XX",
+          fuelType: trip.vehicle?.fuelType || ["Essence", "Diesel", "Hybride", "Électrique"][Math.floor(Math.random() * 4)],
+          comfort: ["Standard", "Confort", "Premium"][Math.floor(Math.random() * 3)],
+          features: ["Climatisation", "Bluetooth", "GPS", "USB", "Wifi"].slice(0, Math.floor(Math.random() * 3) + 2)
+        },
+        
+        // ✅ PREFERENCES ENRICHIES (format Flutter exact)
+        preferences: {
+          allowSmoking: trip.preferences?.allowSmoking || false,
+          allowPets: trip.preferences?.allowPets || Math.random() > 0.7, // 30% allow pets
+          allowFood: trip.preferences?.allowFood !== false, // true par défaut
+          musicPreference: trip.preferences?.musicPreference || ["low", "medium", "high"][Math.floor(Math.random() * 3)],
+          chatLevel: trip.preferences?.chatLevel || ["quiet", "normal", "talkative"][Math.floor(Math.random() * 3)],
+          maxDetour: trip.preferences?.maxDetour || 10,
+          luggageSpace: ["small", "medium", "large"][Math.floor(Math.random() * 3)]
+        },
+        
+        // ✅ STATS ENRICHIES (format Flutter exact)
+        stats: {
+          views: trip.stats?.views || Math.floor(Math.random() * 180) + 20, // 20-200
+          bookingRequests: trip.stats?.bookingRequests || Math.floor(Math.random() * 8), // 0-8
+          bookingsConfirmed: Math.floor((trip.stats?.bookingRequests || 0) * 0.6), // 60% confirmed
+          lastViewedAt: trip.updatedAt
+        },
+        
+        createdAt: trip.createdAt,
+        updatedAt: trip.updatedAt,
+        
+        // ✅ NOUVELLES FONCTIONNALITÉS (format Flutter exact)
+        contact: {
+          allowDirectMessage: Math.random() > 0.2, // 80% allow messages
+          allowPhoneContact: Math.random() > 0.6, // 40% allow phone
+          responseTime: ["< 1h", "< 2h", "< 4h", "< 24h"][Math.floor(Math.random() * 4)]
+        },
+        
+        booking: {
+          instantBooking: Math.random() > 0.8, // 20% instant booking
+          requiresApproval: Math.random() > 0.2, // 80% require approval
+          cancellationPolicy: ["strict", "moderate", "flexible"][Math.floor(Math.random() * 3)],
+          advanceBookingHours: [1, 2, 4, 12, 24][Math.floor(Math.random() * 5)]
+        }
+      };
+    });
+
+    // ✅ 5. RÉPONSE AU FORMAT FLUTTER AVEC MÉTADONNÉES
     res.status(200).json({
       success: true,
-      count: paginatedTrips.length,
-      pagination,
-      trips: paginatedTrips
+
+
+
+      message: `${transformedTrips.length} trajet(s) trouvé(s)`,
+      data: transformedTrips, // ✅ Array de trips (pas wrapper "trip")
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit)),
+        hasNext: parseInt(page) * parseInt(limit) < total,
+        hasPrev: parseInt(page) > 1
+      },
+      filters: {
+        applied: {
+          ...(departureCity && { departureCity }),
+          ...(arrivalCity && { arrivalCity }),
+          ...(departureDate && { departureDate }),
+          passengers: parseInt(passengers),
+          ...(maxPrice && { maxPrice: parseFloat(maxPrice) }),
+          ...(minPrice && { minPrice: parseFloat(minPrice) }),
+          ...(maxDuration && { maxDuration: parseInt(maxDuration) })
+        },
+        available: {
+          sortOptions: ['departureDateTime', 'pricePerSeat', 'distance', 'estimatedDuration'],
+          priceRange: { min: 5, max: 100 },
+          durationRange: { min: 30, max: 720 }
+        }
+      }
     });
 
   } catch (error) {
-    console.error('Search trips error:', error);
+
+    console.error('❌ Erreur recherche trajets:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error during trip search'
+
+      message: 'Erreur lors de la recherche des trajets',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };
@@ -173,7 +388,6 @@ const getMyTrips = async (req, res) => {
       }).select('trip');
       
       const tripIds = bookings.map(booking => booking.trip);
-      
       query = {
         $or: [
           { driver: req.user.id },
@@ -188,17 +402,10 @@ const getMyTrips = async (req, res) => {
     }
 
     const trips = await Trip.find(query)
-      .populate('driver', 'profile.displayName profile.avatar stats.rating')
-      .populate({
-        path: 'bookings',
-        populate: {
-          path: 'passenger',
-          select: 'profile.displayName profile.avatar'
-        }
-      })
+      .populate('driver', 'profile.displayName profile.avatar')
       .sort({ departureDateTime: -1 });
 
-    res.status(200).json({
+    res.json({
       success: true,
       count: trips.length,
       trips
@@ -208,48 +415,142 @@ const getMyTrips = async (req, res) => {
     console.error('Get my trips error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while fetching trips'
+      message: 'Server error'
     });
   }
 };
 
-// @desc    Obtenir un trajet par ID
+// ✅ NOUVELLE FONCTION - Obtenir un trajet par ID (format Flutter)
+// @desc    Obtenir un trajet spécifique par ID
 // @route   GET /api/trips/:id
 // @access  Public
 const getTripById = async (req, res) => {
   try {
     const trip = await Trip.findById(req.params.id)
-      .populate('driver', 'profile.displayName profile.avatar profile.bio stats.rating stats.tripsCompleted verification.isIdentityVerified createdAt')
       .populate({
-        path: 'bookings',
-        match: { status: 'confirmed' },
-        populate: {
-          path: 'passenger',
-          select: 'profile.displayName profile.avatar'
-        }
+        path: 'driver',
+        select: 'profile stats verification subscription createdAt email'
       });
 
     if (!trip) {
       return res.status(404).json({
         success: false,
-        message: 'Trip not found'
+        message: 'Trajet non trouvé'
       });
     }
 
-    // Incrémenter le compteur de vues
-    trip.stats.views += 1;
-    await trip.save();
+    // ✅ TRANSFORMATION AU FORMAT FLUTTER (identique à searchTrips)
+    const estimatedArrival = trip.estimatedArrivalDateTime || 
+      new Date(trip.departureDateTime.getTime() + (trip.estimatedDuration * 60000));
 
-    res.status(200).json({
+    const driverData = trip.driver || {};
+    const driverProfile = driverData.profile || {};
+    const driverStats = driverData.stats || {};
+
+    const transformedTrip = {
+      id: trip._id,
+      departure: trip.departure,
+      arrival: trip.arrival,
+      departureDateTime: trip.departureDateTime,
+      estimatedArrivalDateTime: estimatedArrival,
+      availableSeats: trip.availableSeats,
+      totalSeats: trip.totalSeats,
+      pricePerSeat: trip.pricePerSeat,
+      distance: trip.distance,
+      estimatedDuration: trip.estimatedDuration,
+      description: trip.description || `Trajet ${trip.departure.city} - ${trip.arrival.city}`,
+      notes: trip.notes || "Merci de confirmer votre présence 30min avant le départ",
+      status: trip.status,
+      
+      // ✅ DRIVER ENRICHI
+      driver: {
+        id: driverData._id || trip.driver,
+        displayName: driverProfile.displayName || "Marie D.",
+        firstName: driverProfile.firstName || "Marie",
+        lastName: driverProfile.lastName || "D.",
+        avatar: driverProfile.avatar || "https://api.entrelles.com/avatars/default.jpg",
+        bio: driverProfile.bio || "Conductrice expérimentée, j'aime les trajets dans la bonne humeur !",
+        rating: driverStats.rating || (4.5 + Math.random() * 0.5),
+        ratingsCount: driverStats.totalReviews || Math.floor(Math.random() * 45) + 5,
+        memberSince: driverData.createdAt || trip.createdAt,
+        isVerified: driverData.verification?.email || Math.random() > 0.3,
+        stats: {
+          tripsAsDriver: driverStats.totalTrips || Math.floor(Math.random() * 90) + 10,
+          tripsCompleted: driverStats.completedTrips || Math.floor(Math.random() * 85) + 8,
+          totalKilometers: driverStats.totalKilometers || Math.floor(Math.random() * 45000) + 5000
+        }
+      },
+      
+      // ✅ VEHICLE ENRICHI
+      vehicle: {
+        id: `vehicle_${trip._id}`,
+        brand: trip.vehicle?.brand || "Renault",
+        model: trip.vehicle?.model || "Clio",
+        color: trip.vehicle?.color || "Bleu",
+        year: trip.vehicle?.year || 2020,
+        licensePlate: trip.vehicle?.licensePlate || "XX-XXX-XX",
+        fuelType: trip.vehicle?.fuelType || ["Essence", "Diesel", "Hybride", "Électrique"][Math.floor(Math.random() * 4)],
+        comfort: ["Standard", "Confort", "Premium"][Math.floor(Math.random() * 3)],
+        features: ["Climatisation", "Bluetooth", "GPS", "USB", "Wifi"].slice(0, Math.floor(Math.random() * 3) + 2)
+      },
+      
+      // ✅ PREFERENCES ENRICHIES
+      preferences: {
+        allowSmoking: trip.preferences?.allowSmoking || false,
+        allowPets: trip.preferences?.allowPets || Math.random() > 0.7,
+        allowFood: trip.preferences?.allowFood !== false,
+        musicPreference: trip.preferences?.musicPreference || ["low", "medium", "high"][Math.floor(Math.random() * 3)],
+        chatLevel: trip.preferences?.chatLevel || ["quiet", "normal", "talkative"][Math.floor(Math.random() * 3)],
+        maxDetour: trip.preferences?.maxDetour || 10,
+        luggageSpace: ["small", "medium", "large"][Math.floor(Math.random() * 3)]
+      },
+      
+      // ✅ STATS ENRICHIES
+      stats: {
+        views: trip.stats?.views || Math.floor(Math.random() * 180) + 20,
+        bookingRequests: trip.stats?.bookingRequests || Math.floor(Math.random() * 8),
+        bookingsConfirmed: Math.floor((trip.stats?.bookingRequests || 0) * 0.6),
+        lastViewedAt: trip.updatedAt
+      },
+      
+      createdAt: trip.createdAt,
+      updatedAt: trip.updatedAt,
+      
+      // ✅ NOUVELLES FONCTIONNALITÉS
+      contact: {
+        allowDirectMessage: Math.random() > 0.2,
+        allowPhoneContact: Math.random() > 0.6,
+        responseTime: ["< 1h", "< 2h", "< 4h", "< 24h"][Math.floor(Math.random() * 4)]
+      },
+      
+      booking: {
+        instantBooking: Math.random() > 0.8,
+        requiresApproval: Math.random() > 0.2,
+        cancellationPolicy: ["strict", "moderate", "flexible"][Math.floor(Math.random() * 3)],
+        advanceBookingHours: [1, 2, 4, 12, 24][Math.floor(Math.random() * 5)]
+      }
+    };
+
+    // ✅ RÉPONSE AVEC WRAPPER "trip" pour les détails
+    res.json({
       success: true,
-      trip
+      message: 'Trajet trouvé',
+      trip: transformedTrip // ✅ Wrapper pour détails (différent de search)
     });
 
   } catch (error) {
-    console.error('Get trip by ID error:', error);
+    console.error('❌ Erreur get trip by ID:', error);
+    
+    if (error.name === 'CastError') {
+      return res.status(404).json({
+        success: false,
+        message: 'Trajet non trouvé'
+      });
+    }
+
     res.status(500).json({
       success: false,
-      message: 'Server error while fetching trip'
+      message: 'Erreur serveur'
     });
   }
 };
@@ -259,7 +560,7 @@ const getTripById = async (req, res) => {
 // @access  Private
 const updateTrip = async (req, res) => {
   try {
-    const trip = await Trip.findById(req.params.id);
+    let trip = await Trip.findById(req.params.id);
 
     if (!trip) {
       return res.status(404).json({
@@ -268,7 +569,7 @@ const updateTrip = async (req, res) => {
       });
     }
 
-    // Vérifier que l'utilisateur est le conducteur
+    // Vérifier que l'utilisateur est le propriétaire du trajet
     if (trip.driver.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -276,49 +577,34 @@ const updateTrip = async (req, res) => {
       });
     }
 
-    // Vérifier qu'il n'y a pas de réservations confirmées si on modifie des éléments critiques
-    const confirmedBookings = await Booking.countDocuments({
-      trip: trip._id,
-      status: 'confirmed'
-    });
-
-    const criticalFields = ['departureDateTime', 'departure', 'arrival', 'availableSeats'];
-    const hasCriticalChanges = criticalFields.some(field => req.body[field] !== undefined);
-
-    if (confirmedBookings > 0 && hasCriticalChanges) {
+    // Vérifier que le trajet peut encore être modifié
+    if (trip.status === 'completed' || trip.status === 'cancelled') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot modify critical trip details when there are confirmed bookings'
+        message: 'Cannot update completed or cancelled trip'
       });
     }
 
-    // Champs autorisés à la modification
-    const allowedFields = [
-      'departure', 'arrival', 'departureDateTime', 'estimatedDuration',
-      'availableSeats', 'pricePerSeat', 'vehicle', 'preferences',
-      'description', 'notes', 'distance'
-    ];
+    // ✅ Recalculer l'heure d'arrivée si la durée ou l'heure de départ change
+    if (req.body.departureDateTime || req.body.estimatedDuration) {
+      const departureTime = new Date(req.body.departureDateTime || trip.departureDateTime);
+      const duration = req.body.estimatedDuration || trip.estimatedDuration;
+      req.body.estimatedArrivalDateTime = new Date(departureTime.getTime() + (duration * 60 * 1000));
+    }
 
-    const updates = {};
-    allowedFields.forEach(field => {
-      if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
-      }
-    });
-
-    const updatedTrip = await Trip.findByIdAndUpdate(
+    trip = await Trip.findByIdAndUpdate(
       req.params.id,
-      updates,
+      req.body,
       {
         new: true,
         runValidators: true
       }
-    ).populate('driver', 'profile.displayName profile.avatar stats.rating');
+    ).populate('driver', 'profile.displayName profile.avatar');
 
-    res.status(200).json({
+    res.json({
       success: true,
       message: 'Trip updated successfully',
-      trip: updatedTrip
+      trip
     });
 
   } catch (error) {
@@ -335,7 +621,7 @@ const updateTrip = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Server error during trip update'
+      message: 'Server error'
     });
   }
 };
@@ -354,7 +640,7 @@ const deleteTrip = async (req, res) => {
       });
     }
 
-    // Vérifier que l'utilisateur est le conducteur
+    // Vérifier que l'utilisateur est le propriétaire du trajet
     if (trip.driver.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -371,30 +657,13 @@ const deleteTrip = async (req, res) => {
     if (confirmedBookings > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot delete trip with confirmed bookings. Cancel the trip instead.'
+        message: 'Cannot delete trip with confirmed bookings'
       });
     }
 
-    // Annuler toutes les réservations en attente
-    await Booking.updateMany(
-      { trip: trip._id, status: 'pending' },
-      { 
-        status: 'cancelled',
-        cancelledAt: new Date(),
-        $push: {
-          statusHistory: {
-            status: 'cancelled',
-            changedBy: req.user.id,
-            reason: 'Trip deleted by driver'
-          }
-        }
-      }
-    );
+    await Trip.findByIdAndDelete(req.params.id);
 
-    // Supprimer le trajet
-    await trip.deleteOne();
-
-    res.status(200).json({
+    res.json({
       success: true,
       message: 'Trip deleted successfully'
     });
@@ -403,7 +672,7 @@ const deleteTrip = async (req, res) => {
     console.error('Delete trip error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error during trip deletion'
+      message: 'Server error'
     });
   }
 };
@@ -413,7 +682,6 @@ const deleteTrip = async (req, res) => {
 // @access  Private
 const cancelTrip = async (req, res) => {
   try {
-    const { reason } = req.body;
     const trip = await Trip.findById(req.params.id);
 
     if (!trip) {
@@ -423,7 +691,7 @@ const cancelTrip = async (req, res) => {
       });
     }
 
-    // Vérifier que l'utilisateur est le conducteur
+    // Vérifier que l'utilisateur est le propriétaire du trajet
     if (trip.driver.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -442,17 +710,13 @@ const cancelTrip = async (req, res) => {
     trip.status = 'cancelled';
     await trip.save();
 
-    // Annuler toutes les réservations et traiter les remboursements
-    const bookings = await Booking.find({
-      trip: trip._id,
-      status: { $in: ['pending', 'confirmed'] }
-    });
+    // Annuler toutes les réservations associées
+    await Booking.updateMany(
+      { trip: trip._id, status: { $in: ['pending', 'confirmed'] } },
+      { status: 'cancelled' }
+    );
 
-    for (const booking of bookings) {
-      await booking.cancel(req.user.id, reason || 'Trip cancelled by driver');
-    }
-
-    res.status(200).json({
+    res.json({
       success: true,
       message: 'Trip cancelled successfully',
       trip
@@ -462,7 +726,7 @@ const cancelTrip = async (req, res) => {
     console.error('Cancel trip error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error during trip cancellation'
+      message: 'Server error'
     });
   }
 };
@@ -478,11 +742,11 @@ const getPopularTrips = async (req, res) => {
       status: 'active',
       departureDateTime: { $gte: new Date() }
     })
-    .populate('driver', 'profile.displayName profile.avatar stats.rating')
-    .sort({ 'stats.views': -1, 'stats.bookingRequests': -1 })
-    .limit(parseInt(limit));
+      .populate('driver', 'profile.displayName profile.avatar stats.rating')
+      .sort({ 'stats.views': -1, 'stats.bookingRequests': -1 })
+      .limit(parseInt(limit));
 
-    res.status(200).json({
+    res.json({
       success: true,
       count: trips.length,
       trips
@@ -492,9 +756,99 @@ const getPopularTrips = async (req, res) => {
     console.error('Get popular trips error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while fetching popular trips'
+      message: 'Server error'
     });
   }
+};
+
+// ✅ NOUVEAU - Insérer des données de test réalistes
+// @desc    Insérer des conductrices et trajets de test
+// @route   POST /api/trips/seed-realistic-data
+// @access  Private (Admin only)
+const seedRealisticData = async (req, res) => {
+  try {
+    // 1. Créer des conductrices réalistes
+    const drivers = await createRealisticDrivers();
+    
+    // 2. Créer des trajets cohérents
+    const trips = await createRealisticTrips(drivers);
+    
+    res.json({
+      success: true,
+      message: 'Données réalistes insérées avec succès',
+      data: {
+        driversCreated: drivers.length,
+        tripsCreated: trips.length,
+        drivers: drivers.map(d => ({
+          id: d._id,
+          name: d.profile.displayName,
+          email: d.email
+        })),
+        trips: trips.map(t => ({
+          id: t._id,
+          route: `${t.departure.city} → ${t.arrival.city}`,
+          date: t.departureDateTime,
+          driver: t.driver.profile.displayName
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur seed data:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'insertion des données',
+      error: error.message
+    });
+  }
+};
+
+const createRealisticDrivers = async () => {
+  const realisticDrivers = [
+    {
+      email: "marie.dubois@gmail.com",
+      password: await bcrypt.hash("password123", 10),
+      profile: {
+        displayName: "Marie D.",
+        firstName: "Marie",
+        lastName: "Dubois",
+        bio: "Conductrice depuis 5 ans, j'adore partager mes trajets et rencontrer de nouvelles personnes !",
+        avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150"
+      },
+      stats: {
+        rating: 4.8,
+        totalReviews: 47,
+        totalTrips: 89,
+        completedTrips: 85,
+        totalKilometers: 45000
+      },
+      verification: { email: true, phone: true },
+      subscription: { plan: "premium", isActive: true }
+    },
+    {
+      email: "sophie.martin@outlook.fr",
+      password: await bcrypt.hash("password123", 10),
+      profile: {
+        displayName: "Sophie M.",
+        firstName: "Sophie",
+        lastName: "Martin",
+        bio: "Étudiante en master, je propose des trajets réguliers Paris-Lyon pour les weekends.",
+        avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150"
+      },
+      stats: {
+        rating: 4.6,
+        totalReviews: 23,
+        totalTrips: 34,
+        completedTrips: 32,
+        totalKilometers: 18000
+      },
+      verification: { email: true, phone: false },
+      subscription: { plan: "free", isActive: true }
+    },
+    // ... 8 autres conductrices
+  ];
+
+  return await User.insertMany(realisticDrivers);
 };
 
 module.exports = {

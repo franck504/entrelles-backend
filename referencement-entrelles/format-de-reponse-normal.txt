@@ -1,0 +1,104 @@
+ity zany ny tokony format de reponse an'ilau search_trip  voyage
+
+{
+  "trip": {
+    "id": "trip123",
+    "departure": {
+      "city": "Paris",
+      "address": "Gare du Nord, 75010 Paris",
+      "coordinates": {
+        "lat": 48.8808,
+        "lng": 2.3555
+      },
+      "postalCode": "75010"
+    },
+    "arrival": {
+      "city": "Lyon",
+      "address": "Gare Part-Dieu, 69003 Lyon",
+      "coordinates": {
+        "lat": 45.7603,
+        "lng": 4.8584
+      },
+      "postalCode": "69003"
+    },
+    "departureDateTime": "2024-01-15T14:30:00Z",
+    "estimatedArrivalDateTime": "2024-01-15T18:45:00Z",
+    "availableSeats": 2,
+    "totalSeats": 3,
+    "pricePerSeat": 25.0,
+    "distance": 465.2,
+    "estimatedDuration": 255,
+    "description": "Trajet direct Paris-Lyon, départ ponctuel. Arrêt possible aire de repos.",
+    "notes": "Merci de confirmer votre présence 30min avant le départ",
+    "status": "active",
+    
+    // ✅ DONNÉES CONDUCTRICE (actuellement simulées)
+    "driver": {
+      "id": "user456",
+      "displayName": "Marie Dubois",
+      "firstName": "Marie",
+      "lastName": "Dubois",
+      "avatar": "https://api.entrelles.com/avatars/user456.jpg",
+      "bio": "Conductrice expérimentée, j'aime les trajets dans la bonne humeur !",
+      "rating": 4.8,
+      "ratingsCount": 23,
+      "memberSince": "2023-03-15T10:00:00Z",
+      "isVerified": true,
+      "stats": {
+        "tripsAsDriver": 45,
+        "tripsCompleted": 42,
+        "totalKilometers": 12500
+      }
+    },
+    
+    // ✅ VÉHICULE (partiellement disponible)
+    "vehicle": {
+      "id": "vehicle789",
+      "brand": "Renault",
+      "model": "Clio",
+      "color": "Bleu",
+      "year": 2020,
+      "licensePlate": "AB-123-CD",
+      "fuelType": "Essence",
+      "comfort": "Standard",
+      "features": ["Climatisation", "Bluetooth", "GPS"]
+    },
+    
+    // ✅ PRÉFÉRENCES (disponibles)
+    "preferences": {
+      "allowSmoking": false,
+      "allowPets": true,
+      "allowFood": true,
+      "musicPreference": "medium",
+      "chatLevel": "normal",
+      "maxDetour": 10,
+      "luggageSpace": "medium"
+    },
+    
+    // ✅ STATISTIQUES (partiellement disponibles)
+    "stats": {
+      "views": 156,
+      "bookingRequests": 8,
+      "bookingsConfirmed": 3,
+      "lastViewedAt": "2024-01-10T15:30:00Z"
+    },
+    
+    // ✅ DATES (disponibles)
+    "createdAt": "2024-01-08T09:15:00Z",
+    "updatedAt": "2024-01-10T14:20:00Z",
+    
+    // ✅ FONCTIONNALITÉS SUPPLÉMENTAIRES
+    "contact": {
+      "allowDirectMessage": true,
+      "allowPhoneContact": false,
+      "responseTime": "< 2h"
+    },
+    
+    "booking": {
+      "instantBooking": false,
+      "requiresApproval": true,
+      "cancellationPolicy": "flexible",
+      "advanceBookingHours": 2
+    }
+  }
+}

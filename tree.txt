@@ -1,0 +1,82 @@
+┌──(franck㉿f504)-[~/Documents/entrelles-backend]
+└─$ tree -I 'node_modules'
+.
+├── api
+│   ├── index.js
+│   └── Untitled-1.ini
+├── config
+│   ├── collections.js
+│   ├── database.js
+│   └── passport.js
+├── controllers
+│   ├── authController.js
+│   ├── bookingController.js
+│   └── tripController.js
+├── franck2301 entrelles admin.txt
+├── index.js
+├── middleware
+│   └── authMiddleware.js
+├── models
+│   ├── Booking.js
+│   ├── Trip.js
+│   └── User.js
+├── package.json
+├── package-lock.json
+├── routes
+│   ├── auth.js
+│   ├── bookings.js
+│   ├── googleAuth.js
+│   └── trips.js
+├── services
+├── src-auth-OK.zip
+├── stripe-infos.txt
+├── stripe.key
+├── test-real-stripe-payment.js
+├── tests
+│   ├── test-complete-api.js
+│   └── test-search-data-generator.js
+├── utils
+│   └── validators.js
+└── vercel.json
+
+10 directories, 28 files
+                         
+
+
+
+
+
+
+1. package.json                    # Dépendances et scripts
+2. vercel.json                     # Configuration déploiement
+3. index.js                        # Point d'entrée principal
+4. api/index.js                    # API Vercel handler
+
+
+5. config/database.js              # Connexion MongoDB
+6. config/passport.js              # Stratégies d'authentification
+7. config/collections.js          # Collections MongoDB
+
+8. models/User.js                  # Modèle utilisateur
+9. models/Trip.js                  # Modèle trajet
+10. models/Booking.js              # Modèle réservation
+
+11. utils/validators.js            # Validateurs de données
+12. middleware/authMiddleware.js   # Middleware d'authentification
+
+
+13. controllers/authController.js  # Logique authentification
+14. controllers/tripController.js  # Logique trajets
+15. controllers/bookingController.js # Logique réservations
+
+
+16. routes/auth.js                 # Routes authentification
+17. routes/trips.js                # Routes trajets
+18. routes/bookings.js             # Routes réservations
+19. routes/googleAuth.js           # Routes Google OAuth
+
+
+
+20. tests/test-complete-api.js     # Tests API complets
+21. tests/test-search-data-generator.js # Générateur de données test
+22. test-real-stripe-payment.js   # Test paiements Stripe
