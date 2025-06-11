@@ -14,6 +14,7 @@ const {
 } = require('../controllers/tripController');
 
 const { protect } = require('../middleware/authMiddleware');
+const { enrichTripData } = require('../middleware/tripValidation'); // ✅ AJOUTÉ
 
 // Validation middleware pour les trajets
 const { body, query, validationResult } = require('express-validator');
@@ -271,12 +272,12 @@ router.get('/popular', getPopularTrips);
 router.get('/:id', getTripById);
 
 // Routes protégées (nécessitent une authentification)
-router.use(protect);
+router.use(protect); // Toutes les routes suivantes nécessitent une authentification
 
-router.post('/', validateCreateTrip, createTrip);
+router.post('/', enrichTripData, createTrip); // ✅ MIDDLEWARE AJOUTÉ
 router.get('/', getMyTrips); // Mes trajets
 router.put('/:id', validateUpdateTrip, updateTrip);
 router.delete('/:id', deleteTrip);
-router.put('/:id/cancel', cancelTrip);
+router.patch('/:id/cancel', cancelTrip);
 
 module.exports = router;

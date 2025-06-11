@@ -2,75 +2,161 @@ const Trip = require('../models/Trip');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 
-// @desc    Créer un nouveau trajet
-// @route   POST /api/trips
-// @access  Private
+// ✅ FONCTION UTILITAIRE - Génération de données par défaut
+const generateDefaultData = {
+  // Coordonnées des principales villes françaises
+  cityCoordinates: {
+    'Paris': { lat: 48.8566, lng: 2.3522 },
+    'Lyon': { lat: 45.7640, lng: 4.8357 },
+    'Marseille': { lat: 43.2965, lng: 5.3698 },
+    'Toulouse': { lat: 43.6047, lng: 1.4442 },
+    'Nice': { lat: 43.7102, lng: 7.2620 },
+    'Nantes': { lat: 47.2184, lng: -1.5536 },
+    'Bordeaux': { lat: 44.8378, lng: -0.5792 },
+    'Lille': { lat: 50.6292, lng: 3.0573 },
+    'Strasbourg': { lat: 48.5734, lng: 7.7521 },
+    'Montpellier': { lat: 43.6110, lng: 3.8767 }
+  },
+
+  // Adresses réalistes par ville
+  addresses: {
+    'Paris': [
+      'Gare de Lyon, 75012 Paris',
+      'Gare du Nord, 75010 Paris',
+      'Place de la République, 75003 Paris',
+      'Châtelet-Les Halles, 75001 Paris'
+    ],
+    'Lyon': [
+      'Gare Part-Dieu, 69003 Lyon',
+      'Gare Perrache, 69002 Lyon',
+      'Place Bellecour, 69002 Lyon'
+    ],
+    'Marseille': [
+      'Gare Saint-Charles, 13001 Marseille',
+      'Vieux-Port, 13002 Marseille'
+    ],
+    'Toulouse': [
+      'Gare Matabiau, 31000 Toulouse',
+      'Place du Capitole, 31000 Toulouse'
+    ],
+    'Nice': [
+      'Gare de Nice-Ville, 06000 Nice',
+      'Aéroport Nice Côte d\'Azur, 06206 Nice'
+    ],
+    'Bordeaux': [
+      'Gare Saint-Jean, 33000 Bordeaux',
+      'Place de la Bourse, 33000 Bordeaux'
+    ]
+  },
+
+  // Véhicules réalistes
+  vehicles: [
+    { brand: 'Renault', model: 'Clio', colors: ['Blanc', 'Noir', 'Rouge', 'Bleu'] },
+    { brand: 'Peugeot', model: '208', colors: ['Blanc', 'Gris', 'Rouge'] },
+    { brand: 'Citroën', model: 'C3', colors: ['Blanc', 'Bleu', 'Rouge'] },
+    { brand: 'Volkswagen', model: 'Polo', colors: ['Blanc', 'Noir', 'Gris'] },
+    { brand: 'Toyota', model: 'Yaris', colors: ['Blanc', 'Rouge', 'Gris'] },
+    { brand: 'Ford', model: 'Fiesta', colors: ['Blanc', 'Bleu', 'Rouge'] }
+  ],
+
+  // Calcul automatique de distance (approximatif)
+  calculateDistance: (city1, city2) => {
+    const distances = {
+      'Paris-Lyon': 465, 'Lyon-Paris': 465,
+      'Paris-Marseille': 775, 'Marseille-Paris': 775,
+      'Paris-Toulouse': 680, 'Toulouse-Paris': 680,
+      'Paris-Nice': 930, 'Nice-Paris': 930,
+      'Paris-Bordeaux': 580, 'Bordeaux-Paris': 580,
+      'Lyon-Marseille': 315, 'Marseille-Lyon': 315,
+      'Lyon-Nice': 470, 'Nice-Lyon': 470,
+      'Toulouse-Montpellier': 245, 'Montpellier-Toulouse': 245,
+      'Bordeaux-Toulouse': 245, 'Toulouse-Bordeaux': 245
+    };
+    
+    const key = `${city1}-${city2}`;
+    return distances[key] || Math.floor(Math.random() * 400) + 200; // 200-600km par défaut
+  },
+
+  // Calcul automatique de durée (basé sur distance)
+  calculateDuration: (distance) => {
+    return Math.floor(distance / 90 * 60); // ~90km/h moyenne = minutes
+  },
+
+  // Prix automatique basé sur distance
+  calculatePrice: (distance) => {
+    return Math.floor(distance * 0.08) + Math.floor(Math.random() * 10); // ~8cts/km + variation
+  }
+};
+
+// ✅ SIMPLIFIÉ - Le middleware a déjà enrichi les données
 const createTrip = async (req, res) => {
   try {
-    const {
-      departure,
-      arrival,
-      departureDateTime,
-      estimatedDuration,
-      availableSeats,
-      pricePerSeat,
-      vehicle,
-      preferences,
-      description,
-      notes,
-      distance,
-      isRecurring,
-      recurrence
-    } = req.body;
+    console.log('🚗 Création du trajet avec données enrichies...');
 
-    // ✅ Calculer automatiquement l'heure d'arrivée estimée
-    const departureDate = new Date(departureDateTime);
-    const estimatedArrivalDateTime = new Date(departureDate.getTime() + (estimatedDuration * 60 * 1000));
-
-    // Créer le trajet
-    const trip = await Trip.create({
+    // Les données sont déjà enrichies par le middleware
+    const tripData = {
       driver: req.user.id,
-      departure,
-      arrival,
-      departureDateTime: departureDate,
-      estimatedArrivalDateTime, // ✅ Ajouté automatiquement
-      estimatedDuration,
-      availableSeats,
-      totalSeats: availableSeats,
-      pricePerSeat,
-      vehicle,
-      preferences,
-      description,
-      notes,
-      distance,
-      isRecurring,
-      recurrence
-    });
+      ...req.body,
+      status: 'active'
+    };
 
-    // Populer les données du conducteur
-    await trip.populate('driver', 'profile.displayName profile.avatar stats.rating');
+    // Calculer l'heure d'arrivée
+    if (req.body.departureDateTime && req.body.estimatedDuration) {
+      tripData.estimatedArrivalDateTime = new Date(
+        new Date(req.body.departureDateTime).getTime() + 
+        (req.body.estimatedDuration * 60 * 1000)
+      );
+    }
+
+    console.log('📊 Données finales:', tripData);
+
+    const trip = await Trip.create(tripData);
+    await trip.populate('driver', 'profile.displayName profile.avatar stats.rating email');
 
     res.status(201).json({
       success: true,
-      message: 'Trip created successfully',
-      trip
+      message: 'Trajet créé avec succès',
+      trip: {
+        id: trip._id,
+        departure: trip.departure,
+        arrival: trip.arrival,
+        departureDateTime: trip.departureDateTime,
+        estimatedArrivalDateTime: trip.estimatedArrivalDateTime,
+        availableSeats: trip.availableSeats,
+        totalSeats: trip.totalSeats,
+        pricePerSeat: trip.pricePerSeat,
+        distance: trip.distance,
+        estimatedDuration: trip.estimatedDuration,
+        description: trip.description,
+        driver: {
+          id: trip.driver._id,
+          displayName: trip.driver.profile.displayName,
+          email: trip.driver.email
+        },
+        createdAt: trip.createdAt
+      }
     });
 
   } catch (error) {
-    console.error('Create trip error:', error);
+    console.error('❌ Erreur création trajet:', error);
     
     if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(err => err.message);
+      const messages = Object.values(error.errors).map(err => ({
+        field: err.path,
+        message: err.message,
+        value: err.value
+      }));
       return res.status(400).json({
         success: false,
-        message: 'Validation error',
+        message: 'Validation errors',
         errors: messages
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'Server error during trip creation'
+      message: 'Erreur serveur lors de la création du trajet',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };
