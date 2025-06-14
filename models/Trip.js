@@ -168,6 +168,31 @@ tripSchema.pre('save', function(next) {
   next();
 });
 
+// Méthode pour vérifier si un trajet peut être réservé par un utilisateur
+tripSchema.methods.canBeBookedBy = function(userId) {
+  // Vérifier que le trajet est actif
+  if (this.status !== 'active') {
+    return false;
+  }
+  
+  // Vérifier que ce n'est pas le conducteur qui essaie de réserver son propre trajet
+  if (this.driver.toString() === userId.toString()) {
+    return false;
+  }
+  
+  // Vérifier que le trajet n'est pas dans le passé
+  if (this.departureDateTime <= new Date()) {
+    return false;
+  }
+  
+  // Vérifier qu'il y a des places disponibles
+  if (this.availableSeats <= 0) {
+    return false;
+  }
+  
+  return true;
+};
+
 // Index pour les recherches
 tripSchema.index({ 'departure.city': 1, 'arrival.city': 1, departureDateTime: 1 });
 tripSchema.index({ driver: 1, status: 1 });
