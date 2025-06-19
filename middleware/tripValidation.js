@@ -98,9 +98,12 @@ const enrichTripData = (req, res, next) => {
       req.body.estimatedDuration = Math.floor(req.body.distance / 90 * 60); // ~90km/h
     }
 
-    // 5. Calculer prix si manquant
+    // ✅ REMPLACER lignes 84-87
+    // 5. Calculer prix si manquant (arrondir vers le haut - aucune perte)
     if (!req.body.pricePerSeat && req.body.distance) {
-      req.body.pricePerSeat = Math.floor(req.body.distance * 0.08) + Math.floor(Math.random() * 10);
+      const exactPrice = req.body.distance * 0.55;
+      req.body.pricePerSeat = Math.ceil(exactPrice * 100) / 100; // Arrondir vers le haut au centime
+      console.log(`💰 Prix calculé: ${exactPrice.toFixed(2)}€ → ${req.body.pricePerSeat}€ (arrondi vers le haut)`);
     }
 
     // 6. Ajouter places disponibles si manquantes

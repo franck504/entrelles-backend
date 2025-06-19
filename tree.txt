@@ -1,6 +1,8 @@
+                                                                                
 ┌──(franck㉿f504)-[~/Documents/entrelles-backend]
 └─$ tree -I 'node_modules'
 .
+├── 01-avant-fixing-price.zip
 ├── api
 │   ├── index.js
 │   └── Untitled-1.ini
@@ -11,8 +13,8 @@
 ├── controllers
 │   ├── authController.js
 │   ├── bookingController.js
+│   ├── paymentController.js
 │   └── tripController.js
-├── franck2301 entrelles admin.txt
 ├── index.js
 ├── middleware
 │   ├── authMiddleware.js
@@ -23,31 +25,146 @@
 │   └── User.js
 ├── package.json
 ├── package-lock.json
-├── referencement-entrelles
-│   ├── api-docs.txt
-│   ├── format-de-reponse-normal.txt
-│   ├── serach-trip-docs.txt
-│   ├── stripe-account-infos.txt
-│   └── trips-data.json
 ├── routes
 │   ├── auth.js
 │   ├── bookings.js
 │   ├── googleAuth.js
+│   ├── payments.js
 │   ├── tripRoutes.js
-│   └── trips.js
+│   ├── trips.js
+│   └── webhooks.js
 ├── services
 ├── src-auth-OK.zip
 ├── stripe-infos.txt
 ├── stripe.key
-├── test-add-realist-data.js
-├── test.js
-├── test-real-stripe-payment.js
-├── tests
-│   ├── test-complete-api.js
-│   └── test-search-data-generator.js
+├── test-complete-user-flow-clean.jps
+├── test-complete-user-flow-detailed.js
+├── test-complete-user-flow-fixed.js
 ├── tree.txt
 ├── utils
 │   └── validators.js
 └── vercel.json
 
-11 directories, 38 files
+9 directories, 34 files
+
+
+
+✅ payment_intent.succeeded
+✅ payment_intent.payment_failed  
+✅ refund.created
+
+🔄 payment_intent.created
+🔄 payment_intent.canceled
+🔄 payment_intent.requires_action
+🔄 charge.succeeded
+🔄 charge.failed
+🔄 charge.dispute.created
+🔄 refund.updated
+
+
+🔄 customer.subscription.created
+🔄 customer.subscription.updated
+🔄 customer.subscription.deleted
+🔄 customer.subscription.trial_will_end
+🔄 invoice.payment_succeeded
+🔄 invoice.payment_failed
+🔄 invoice.upcoming
+🔄 customer.created
+🔄 customer.updated
+
+
+🔄 payout.created
+🔄 payout.updated
+🔄 payout.paid
+🔄 payout.failed
+🔄 transfer.created
+🔄 transfer.updated
+
+
+
+
+
+# Commençons par les bases
+cat package.json          # Dépendances et scripts
+cat vercel.json           # Configuration déploiement
+cat index.js              # Point d'entrée principal
+cat config/database.js    # Connexion MongoDB
+
+
+# L'ordre des modèles est important (dépendances)
+cat models/User.js        # Utilisatrices (base)
+cat models/Trip.js        # Trajets (référence User)
+cat models/Booking.js     # Réservations (référence User + Trip)
+
+
+cat middleware/authMiddleware.js    # Authentification JWT
+cat middleware/tripValidation.js    # Enrichissement données trajets
+cat utils/validators.js             # Validations express-validator
+
+
+cat controllers/authController.js     # Inscription/Connexion
+cat controllers/tripController.js     # Gestion trajets
+cat controllers/bookingController.js  # Gestion réservations
+cat controllers/paymentController.js  # Gestion paiements Stripe
+
+
+
+cat routes/auth.js        # Routes authentification
+cat routes/trips.js       # Routes trajets
+cat routes/bookings.js    # Routes réservations
+cat routes/payments.js    # Routes paiements
+cat routes/webhooks.js    # Webhooks Stripe
+
+
+
+cat test-complete-user-flow-detailed.js  # Test flow complet (VOTRE VERSION)
+cat test-complete-user-flow-clean.js     # Version nettoyée
+cat test-complete-user-flow-fixed.js     # Version corrigée
+
+
+# Inscription d'une nouvelle utilisatrice
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "josie@gmail.com",
+    "password": "Password123",
+    "displayName": "Marie Test",
+    "firstName": "Marie",
+    "lastName": "Test",
+    "gender": "femme",
+    "phone": "+33612345678"
+  }'
+
+
+
+price_1RYa3b4GtFeoWSgT7uK1TC0I
+
+
+# Créer l'abonnement premium
+curl -X POST http://localhost:3000/api/payments/create-subscription \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODUzMjBkNDA3ZjAyODRmMDJmMDc5MTIiLCJpYXQiOjE3NTAyNzgzNTYsImV4cCI6MTc1MDg4MzE1Nn0.82RNRj7s7lvKR8eSWbGeD7uVnGSR-EYMLumrppKUYyE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "priceId": "price_1RYa3b4GtFeoWSgT7uK1TC0I"
+  }'
+
+
+
+✅ package.json - Dépendances et scripts
+✅ index.js - Serveur principal avec routes
+✅ api/index.js - Handler Vercel
+✅ vercel.json - Configuration déploiement
+✅ config/database.js - Connexion MongoDB
+✅ config/passport.js - Auth Google (désactivée)
+Modèles de données
+✅ models/User.js - Utilisatrices avec Stripe
+✅ models/Trip.js - Trajets de covoiturage
+✅ models/Booking.js - Réservations avec paiements
+Controllers & Middleware
+✅ controllers/authController.js - Authentification JWT
+✅ controllers/bookingController.js - Gestion réservations
+✅ controllers/paymentController.js - Paiements Stripe
+✅ middleware/authMiddleware.js - Protection routes
+
+// Ajouter après les routes existantes
+router.post('/confirm-subscription-payment', confirmSubscriptionPayment);

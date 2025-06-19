@@ -28,7 +28,10 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Body parsing middleware
+// ✅ NOUVEAU : Middleware spécial pour webhooks (avant body parsing)
+app.use('/api/webhooks', require('./routes/webhooks'));
+
+// Body parsing middleware (après webhooks)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
@@ -40,7 +43,13 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     status: 'active',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    // ✅ NOUVEAU : Infos paiement
+    features: {
+      payments: 'enabled',
+      stripe: 'configured',
+      webhooks: 'active'
+    }
   });
 });
 
@@ -50,14 +59,22 @@ app.get('/health', (req, res) => {
     status: 'OK',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV,
+    // ✅ NOUVEAU : Vérification Stripe
+    stripe: {
+      configured: !!process.env.STRIPE_SECRET_KEY,
+      webhookConfigured: !!process.env.STRIPE_WEBHOOK_SECRET
+    }
   });
 });
 
-// Routes API
+// Routes API existantes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/trips', require('./routes/trips'));
 app.use('/api/bookings', require('./routes/bookings'));
+
+// ✅ VÉRIFIEZ QUE CETTE LIGNE EXISTE
+app.use('/api/payments', require('./routes/payments'));
 
 // Test database route
 app.get('/test-db', async (req, res) => {
@@ -81,6 +98,36 @@ app.get('/test-db', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: 'Database test failed',
+      error: error.message
+    });
+  }
+});
+
+// ✅ NOUVEAU : Test Stripe
+app.get('/test-stripe', async (req, res) => {
+  try {
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    
+    // Test simple : créer un PaymentIntent de test
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: 1000, // 10€
+      currency: 'eur',
+      metadata: { test: 'true' }
+    });
+
+    res.json({
+      message: 'Stripe connection test',
+      status: 'OK',
+      paymentIntent: {
+        id: paymentIntent.id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        status: paymentIntent.status
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Stripe test failed',
       error: error.message
     });
   }
@@ -114,5 +161,7 @@ if (process.env.NODE_ENV === 'production') {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔗 API URL: http://localhost:${PORT}`);
+    console.log(`💳 Stripe: ${process.env.STRIPE_SECRET_KEY ? '✅ Configured' : '❌ Not configured'}`);
+    console.log(`🔗 Webhook: ${process.env.STRIPE_WEBHOOK_SECRET ? '✅ Configured' : '❌ Not configured'}`);
   });
 }

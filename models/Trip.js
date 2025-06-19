@@ -64,7 +64,7 @@ const tripSchema = new mongoose.Schema({
   },
   pricePerSeat: {
     type: Number,
-    default: 20 // ✅ DEFAULT au lieu de validation stricte
+    //default: 20 // ✅ DEFAULT au lieu de validation stricte
   },
   distance: {
     type: Number,

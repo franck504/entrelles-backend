@@ -167,6 +167,66 @@ const userSchema = new mongoose.Schema({
       default: 0
     }
   },
+  subscription: {
+    plan: {
+      type: String,
+      enum: ['free', 'premium'],
+      default: 'free'
+    },
+    isActive: {
+      type: Boolean,
+      default: false
+    },
+    stripeSubscriptionId: String,
+    status: {
+      type: String,
+      enum: ['active', 'canceled', 'past_due', 'unpaid', 'inactive', 'incomplete'],
+      default: 'inactive'
+    },
+    currentPeriodStart: Date,
+    currentPeriodEnd: Date,
+    cancelAtPeriodEnd: {
+      type: Boolean,
+      default: false
+    }
+  },
+  stripe: {
+    customerId: String,
+    defaultPaymentMethodId: String
+  },
+  bankingInfo: {
+    accountHolderName: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Account holder name cannot exceed 100 characters']
+    },
+    iban: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      match: [/^[A-Z]{2}[0-9]{2}[A-Z0-9]{4}[0-9]{7}([A-Z0-9]?){0,16}$/, 'Please provide a valid IBAN']
+    },
+    bic: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      match: [/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/, 'Please provide a valid BIC']
+    },
+    bankName: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Bank name cannot exceed 100 characters']
+    },
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    verifiedAt: Date,
+    addedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
   security: {
     loginAttempts: {
       type: Number,
@@ -209,13 +269,39 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index pour les performances
+userSchema.methods.hasActiveSubscription = function() {
+  return this.subscription.status === 'active' && 
+         this.subscription.currentPeriodEnd > new Date();
+};
+
+userSchema.methods.canCreateTrips = function() {
+  return this.hasActiveSubscription() || this.subscription.plan === 'free';
+};
+
+userSchema.methods.getSubscriptionStatus = function() {
+  if (!this.subscription.stripeSubscriptionId) {
+    return 'no_subscription';
+  }
+  
+  if (this.subscription.status === 'active' && this.subscription.currentPeriodEnd > new Date()) {
+    return 'active';
+  }
+  
+  if (this.subscription.status === 'past_due') {
+    return 'past_due';
+  }
+  
+  return 'inactive';
+};
+
 userSchema.index({ email: 1 });
 userSchema.index({ googleId: 1 });
 userSchema.index({ 'profile.phone': 1 });
 userSchema.index({ status: 1, 'metadata.lastActive': -1 });
+userSchema.index({ 'subscription.stripeCustomerId': 1 });
+userSchema.index({ 'subscription.stripeSubscriptionId': 1 });
+userSchema.index({ 'subscription.status': 1 });
 
-// Middleware pour hasher le mot de passe
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {
     next();
@@ -226,12 +312,10 @@ userSchema.pre('save', async function(next) {
   next();
 });
 
-// Méthode pour comparer les mots de passe
 userSchema.methods.comparePassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Méthode pour générer un token JWT
 userSchema.methods.generateAuthToken = function() {
   return jwt.sign(
     { userId: this._id },
@@ -240,12 +324,10 @@ userSchema.methods.generateAuthToken = function() {
   );
 };
 
-// Méthode pour vérifier si le compte est verrouillé
 userSchema.methods.isLocked = function() {
   return !!(this.security.lockUntil && this.security.lockUntil > Date.now());
 };
 
-// Méthode pour incrémenter les tentatives de connexion
 userSchema.methods.incLoginAttempts = async function() {
   if (this.security.lockUntil && this.security.lockUntil < Date.now()) {
     return this.updateOne({
@@ -267,7 +349,6 @@ userSchema.methods.incLoginAttempts = async function() {
   return this.updateOne(updates);
 };
 
-// Méthode pour réinitialiser les tentatives de connexion
 userSchema.methods.resetLoginAttempts = function() {
   return this.updateOne({
     $unset: {

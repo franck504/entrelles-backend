@@ -100,6 +100,12 @@ const createTrip = async (req, res) => {
       status: 'active'
     };
 
+    // ✅ NOUVEAU : Calcul automatique du prix basé sur la distance
+    if (req.body.distance && !req.body.pricePerSeat) {
+      req.body.pricePerSeat = req.body.distance * 0.55;
+      console.log(`💰 Prix calculé automatiquement: ${req.body.pricePerSeat}€ (${req.body.distance}km × 0.55€)`);
+    }
+
     // Calculer l'heure d'arrivée
     if (req.body.departureDateTime && req.body.estimatedDuration) {
       tripData.estimatedArrivalDateTime = new Date(

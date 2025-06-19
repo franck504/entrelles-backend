@@ -289,9 +289,7 @@ const forgotPassword = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: 'Password reset email sent',
-      // TODO: Supprimer cette ligne en production
-      resetToken: resetToken
+      message: 'Password reset email sent'
     });
 
   } catch (error) {
