@@ -3,13 +3,13 @@ const User = require('../models/User');
 const Booking = require('../models/Booking');
 const Trip = require('../models/Trip');
 
-// ✅ ABONNEMENT - Création
+// ✅ ABONNEMENT ONE-SHOT
 const createAndActivateSubscription = async (req, res) => {
   try {
     const { priceId } = req.body;
     const userId = req.user.id;
     
-    console.log('🚀 Creating subscription for user:', userId);
+    console.log('🚀 One-shot subscription for user:', userId);
     
     const user = await User.findById(userId);
     if (!user) {
@@ -20,7 +20,7 @@ const createAndActivateSubscription = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Already subscribed' });
     }
 
-    // Créer customer
+    // 1️⃣ Créer customer
     let customerId = user.stripe?.customerId;
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -32,7 +32,7 @@ const createAndActivateSubscription = async (req, res) => {
       await User.findByIdAndUpdate(userId, { 'stripe.customerId': customerId });
     }
 
-    // Créer abonnement
+    // 2️⃣ Créer abonnement
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
@@ -42,24 +42,40 @@ const createAndActivateSubscription = async (req, res) => {
       metadata: { userId: userId.toString(), plan: 'premium' }
     });
 
-    // Sauvegarder abonnement
+    // 3️⃣ Confirmer automatiquement le paiement
+    if (subscription.latest_invoice?.payment_intent) {
+      await stripe.paymentIntents.confirm(
+        subscription.latest_invoice.payment_intent.id,
+        { 
+          payment_method: 'pm_card_visa',
+          return_url: 'https://entrelles-backend.vercel.app/api/payments/return'
+        }
+      );
+    }
+
+    // 4️⃣ Récupérer le statut final
+    const finalSubscription = await stripe.subscriptions.retrieve(subscription.id);
+
+    // 5️⃣ Sauvegarder en base
     await User.findByIdAndUpdate(userId, {
-      'subscription.stripeSubscriptionId': subscription.id,
-      'subscription.status': subscription.status,
+      'subscription.stripeSubscriptionId': finalSubscription.id,
+      'subscription.status': finalSubscription.status,
       'subscription.plan': 'premium',
-      'subscription.isActive': subscription.status === 'active',
-      'subscription.currentPeriodStart': new Date(subscription.current_period_start * 1000),
-      'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000)
+      'subscription.isActive': finalSubscription.status === 'active',
+      'subscription.currentPeriodStart': new Date(finalSubscription.current_period_start * 1000),
+      'subscription.currentPeriodEnd': new Date(finalSubscription.current_period_end * 1000)
     });
 
     res.status(201).json({
       success: true,
-      message: '🎉 Abonnement créé avec succès !',
+      message: finalSubscription.status === 'active' ? 
+        '🎉 Bienvenue dans Entrelles Premium !' : 
+        'Abonnement en cours de traitement',
       subscription: {
-        id: subscription.id,
-        status: subscription.status,
-        isActive: subscription.status === 'active',
-        clientSecret: subscription.latest_invoice.payment_intent?.client_secret
+        id: finalSubscription.id,
+        status: finalSubscription.status,
+        isActive: finalSubscription.status === 'active',
+        plan: 'premium'
       }
     });
 
@@ -69,66 +85,6 @@ const createAndActivateSubscription = async (req, res) => {
       success: false,
       message: 'Error creating subscription',
       error: error.message
-    });
-  }
-};
-
-// ✅ NOUVELLE ROUTE - Confirmation abonnement
-const confirmSubscription = async (req, res) => {
-  try {
-    const { subscriptionId } = req.body;
-    const userId = req.user.id;
-
-    console.log('🎯 Confirming subscription:', subscriptionId);
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    // Récupérer l'abonnement
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
-      expand: ['latest_invoice.payment_intent']
-    });
-
-    if (!subscription.latest_invoice?.payment_intent) {
-      return res.status(400).json({ success: false, message: 'No payment intent found' });
-    }
-
-    // Confirmer avec carte test
-    const paymentIntent = await stripe.paymentIntents.confirm(
-      subscription.latest_invoice.payment_intent.id,
-      { 
-        payment_method: 'pm_card_visa',
-        return_url: 'https://entrelles-backend.vercel.app/api/payments/return'
-      }
-    );
-
-    // Récupérer le statut mis à jour
-    const updatedSubscription = await stripe.subscriptions.retrieve(subscriptionId);
-
-    // Mettre à jour en base
-    await User.findByIdAndUpdate(userId, {
-      'subscription.status': updatedSubscription.status,
-      'subscription.isActive': updatedSubscription.status === 'active'
-    });
-
-    res.json({
-      success: true,
-      message: updatedSubscription.status === 'active' ? '🎉 Abonnement activé !' : 'Abonnement en cours de traitement',
-      subscription: { 
-        id: updatedSubscription.id,
-        status: updatedSubscription.status, 
-        isActive: updatedSubscription.status === 'active' 
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Confirm subscription error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error confirming subscription',
-      error: error.message 
     });
   }
 };
@@ -154,7 +110,7 @@ const getSubscriptionStatus = async (req, res) => {
   }
 };
 
-// ✅ PAIEMENT TRAJET - Fonction principale
+// ✅ PAIEMENT TRAJET
 const createTripPayment = async (req, res) => {
   try {
     const { bookingId } = req.body;
@@ -391,10 +347,9 @@ const getDriverFinancialStatus = async (req, res) => {
   }
 };
 
-// ✅ EXPORTS NETTOYÉS
+// ✅ EXPORTS FINAUX
 module.exports = {
   createAndActivateSubscription,
-  confirmSubscription,  // ✅ NOUVELLE
   getSubscriptionStatus,
   createTripPayment,
   finalizeTripPayment,
