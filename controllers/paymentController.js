@@ -20,77 +20,26 @@ const createAndActivateSubscription = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Already subscribed' });
     }
 
-    // ✅ SOLUTION PERMANENTE - Auto-recovery customer
+    // Créer customer
     let customerId = user.stripe?.customerId;
-    
-    // Vérifier si le customer existe dans Stripe
-    if (customerId) {
-      try {
-        await stripe.customers.retrieve(customerId);
-        console.log('✅ Customer existant trouvé:', customerId);
-      } catch (error) {
-        if (error.code === 'resource_missing') {
-          console.log('❌ Customer inexistant dans Stripe, recréation automatique...');
-          customerId = null; // Forcer la recréation
-          
-          // Nettoyer l'ancien customerId en base
-          await User.findByIdAndUpdate(userId, { 
-            $unset: { 'stripe.customerId': 1 } 
-          });
-        } else {
-          throw error; // Autre erreur Stripe
-        }
-      }
-    }
-
-    // Créer nouveau customer si nécessaire
     if (!customerId) {
-      console.log('🆕 Création nouveau customer Stripe...');
       const customer = await stripe.customers.create({
         email: user.email,
         name: user.profile.displayName,
-        metadata: { 
-          userId: userId.toString(),
-          createdAt: new Date().toISOString()
-        }
+        metadata: { userId: userId.toString() }
       });
-      
       customerId = customer.id;
-      
-      // Sauvegarder le nouveau customerId
-      await User.findByIdAndUpdate(userId, { 
-        'stripe.customerId': customerId 
-      });
-      
-      console.log('✅ Nouveau customer créé:', customerId);
+      await User.findByIdAndUpdate(userId, { 'stripe.customerId': customerId });
     }
 
-    // Créer payment method
-    const paymentMethod = await stripe.paymentMethods.create({
-      type: 'card',
-      card: {
-        number: '4242424242424242',
-        exp_month: 12,
-        exp_year: 2025,
-        cvc: '123'
-      }
-    });
-
-    await stripe.paymentMethods.attach(paymentMethod.id, { 
-      customer: customerId 
-    });
-
-    await stripe.customers.update(customerId, {
-      invoice_settings: { 
-        default_payment_method: paymentMethod.id 
-      }
-    });
-
-    // Créer abonnement
+    // ✅ SOLUTION FINALE - Créer abonnement SANS Payment Method
+    // Stripe gérera le paiement via les webhooks et invoices
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
-      default_payment_method: paymentMethod.id, // ✅ Même PM partout
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      expand: ['latest_invoice.payment_intent'],
       metadata: { userId: userId.toString(), plan: 'premium' }
     });
 
@@ -106,11 +55,12 @@ const createAndActivateSubscription = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: '🎉 Bienvenue dans Entrelles Premium !',
+      message: '🎉 Abonnement créé avec succès !',
       subscription: {
         id: subscription.id,
         status: subscription.status,
-        isActive: subscription.status === 'active'
+        isActive: subscription.status === 'active',
+        clientSecret: subscription.latest_invoice.payment_intent?.client_secret
       }
     });
 
