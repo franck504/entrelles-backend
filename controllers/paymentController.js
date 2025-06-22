@@ -35,7 +35,12 @@ const createAndActivateSubscription = async (req, res) => {
     // Créer payment method
     const paymentMethod = await stripe.paymentMethods.create({
       type: 'card',
-      card: { token: 'tok_visa' }
+      card: {
+        number: '4242424242424242',  // Carte test Stripe
+        exp_month: 12,
+        exp_year: 2025,
+        cvc: '123'
+      }
     });
 
     await stripe.paymentMethods.attach(paymentMethod.id, { customer: customerId });
