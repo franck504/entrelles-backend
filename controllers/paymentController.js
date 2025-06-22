@@ -3,7 +3,7 @@ const User = require('../models/User');
 const Booking = require('../models/Booking');
 const Trip = require('../models/Trip');
 
-// ✅ ABONNEMENT EN 1 COUP - SEULE FONCTION NÉCESSAIRE
+// ✅ ABONNEMENT - Création
 const createAndActivateSubscription = async (req, res) => {
   try {
     const { priceId } = req.body;
@@ -32,8 +32,7 @@ const createAndActivateSubscription = async (req, res) => {
       await User.findByIdAndUpdate(userId, { 'stripe.customerId': customerId });
     }
 
-    // ✅ SOLUTION FINALE - Créer abonnement SANS Payment Method
-    // Stripe gérera le paiement via les webhooks et invoices
+    // Créer abonnement
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
@@ -74,7 +73,67 @@ const createAndActivateSubscription = async (req, res) => {
   }
 };
 
-// ✅ STATUT ABONNEMENT - SIMPLE
+// ✅ NOUVELLE ROUTE - Confirmation abonnement
+const confirmSubscription = async (req, res) => {
+  try {
+    const { subscriptionId } = req.body;
+    const userId = req.user.id;
+
+    console.log('🎯 Confirming subscription:', subscriptionId);
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Récupérer l'abonnement
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ['latest_invoice.payment_intent']
+    });
+
+    if (!subscription.latest_invoice?.payment_intent) {
+      return res.status(400).json({ success: false, message: 'No payment intent found' });
+    }
+
+    // Confirmer avec carte test
+    const paymentIntent = await stripe.paymentIntents.confirm(
+      subscription.latest_invoice.payment_intent.id,
+      { 
+        payment_method: 'pm_card_visa',
+        return_url: 'https://entrelles-backend.vercel.app/api/payments/return'
+      }
+    );
+
+    // Récupérer le statut mis à jour
+    const updatedSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+    // Mettre à jour en base
+    await User.findByIdAndUpdate(userId, {
+      'subscription.status': updatedSubscription.status,
+      'subscription.isActive': updatedSubscription.status === 'active'
+    });
+
+    res.json({
+      success: true,
+      message: updatedSubscription.status === 'active' ? '🎉 Abonnement activé !' : 'Abonnement en cours de traitement',
+      subscription: { 
+        id: updatedSubscription.id,
+        status: updatedSubscription.status, 
+        isActive: updatedSubscription.status === 'active' 
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Confirm subscription error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error confirming subscription',
+      error: error.message 
+    });
+  }
+};
+
+// ✅ STATUT ABONNEMENT
 const getSubscriptionStatus = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -95,7 +154,7 @@ const getSubscriptionStatus = async (req, res) => {
   }
 };
 
-// ✅ PAIEMENT TRAJET - FONCTION PRINCIPALE
+// ✅ PAIEMENT TRAJET - Fonction principale
 const createTripPayment = async (req, res) => {
   try {
     const { bookingId } = req.body;
@@ -216,15 +275,10 @@ const finalizeTripPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No payment to finalize' });
     }
 
-    // Créer payment method test et confirmer
-    const paymentMethod = await stripe.paymentMethods.create({
-      type: 'card',
-      card: { token: 'tok_visa' }
-    });
-
+    // Confirmer avec carte test
     const paymentIntent = await stripe.paymentIntents.confirm(
       booking.payment.stripePaymentIntentId,
-      { payment_method: paymentMethod.id }
+      { payment_method: 'pm_card_visa' }
     );
 
     if (paymentIntent.status === 'succeeded') {
@@ -261,9 +315,7 @@ const finalizeTripPayment = async (req, res) => {
   }
 };
 
-// @desc Obtenir le statut financier complet du conducteur
-// @route GET /api/payments/driver/financial-status
-// @access Private
+// ✅ STATUT FINANCIER CONDUCTEUR
 const getDriverFinancialStatus = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -274,12 +326,12 @@ const getDriverFinancialStatus = async (req, res) => {
       });
     }
 
-    // 1. Statut KYC
+    // Statut KYC
     const kycStatus = user.getKycStatus();
     let balance = null;
     let payouts = null;
 
-    // 2. Balance si compte vérifié
+    // Balance si compte vérifié
     if (kycStatus.hasConnectAccount && kycStatus.canReceivePayments) {
       try {
         const stripeBalance = await stripe.balance.retrieve({
@@ -295,11 +347,9 @@ const getDriverFinancialStatus = async (req, res) => {
             sum + (bal.currency === 'eur' ? bal.amount / 100 : 0), 0)
         };
 
-        // 3. Derniers virements
-        const stripePayouts = await stripe.payouts.list(
-          { limit: 10 },
-          { stripeAccount: kycStatus.connectAccountId }
-        );
+        // Derniers virements
+        const stripePayouts = await stripe.payouts.list({ limit: 10 },
+          { stripeAccount: kycStatus.connectAccountId });
 
         payouts = stripePayouts.data.map(payout => ({
           id: payout.id,
@@ -341,9 +391,10 @@ const getDriverFinancialStatus = async (req, res) => {
   }
 };
 
-// ✅ EXPORT AVEC NOUVELLE FONCTION
+// ✅ EXPORTS NETTOYÉS
 module.exports = {
   createAndActivateSubscription,
+  confirmSubscription,  // ✅ NOUVELLE
   getSubscriptionStatus,
   createTripPayment,
   finalizeTripPayment,

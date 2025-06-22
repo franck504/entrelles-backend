@@ -24,4 +24,7 @@ router.post('/finalize-trip-payment', finalizeTripPayment);
 // ✅ AJOUTEZ CETTE ROUTE AVANT module.exports
 router.get('/driver/financial-status', getDriverFinancialStatus);
 
+// ✅ NOUVELLE ROUTE
+router.post('/confirm-subscription', auth, paymentController.confirmSubscription);
+
 module.exports = router;
