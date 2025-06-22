@@ -32,7 +32,7 @@ const createAndActivateSubscription = async (req, res) => {
       await User.findByIdAndUpdate(userId, { 'stripe.customerId': customerId });
     }
 
-    // Créer payment method
+    // Créer payment method et changer cle stripe
     const paymentMethodId = 'pm_card_visa'; // Payment Method test officiel
 
     await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
