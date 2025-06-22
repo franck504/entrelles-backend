@@ -1,1038 +1,168 @@
-# 1. Inscription nouvelle utilisatrice
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "marie.test@gmail.com",
-    "password": "Test123456",
-    "displayName": "Marie Test",
-    "firstName": "Marie",
-    "lastName": "Test",
-    "gender": "femme",
-    "phone": "+33612345678"
-  }'
-# 2. Connexion
-TOKEN=$(curl -s -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "marie.test@gmail.com", "password": "Test123456"}' | jq -r '.token')
-
-echo "Token: $TOKEN"
-
-👉️{"success":true,"message":"Registration successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NWI1YTUzYzcxYjcyYmE5YTJjOTgiLCJpYXQiOjE3NTA0MjQ0MTAsImV4cCI6MTc1MTAyOTIxMH0.kNoppPvNTyrWH67LFrTjCAW22mRPdEmMdkMDeCHJ8V8","user":{"id":"68555b5a53c71b72ba9a2c98","email":"marietest@gmail.com","profile":{"displayName":"Marie Test","firstName":"Marie","lastName":"Test","avatar":"","gender":"femme"},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false},"stats":{"tripsAsDriver":0,"tripsAsPassenger":0,"tripsCompleted":0,"rating":0,"ratingsCount":0,"totalEarnings":0,"responseTime":0,"cancellationRate":0},"createdAt":"2025-06-20T13:00:10.155Z"}} 
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ # 3. Vérifier statut KYC initial
-curl -X GET http://localhost:3000/api/kyc/status \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NWI1YTUzYzcxYjcyYmE5YTJjOTgiLCJpYXQiOjE3NTA0MjQ0MTAsImV4cCI6MTc1MTAyOTIxMH0.kNoppPvNTyrWH67LFrTjCAW22mRPdEmMdkMDeCHJ8V8" | jq '.'
-
-# 4. Vérifier statut financier initial
-curl -X GET http://localhost:3000/api/payments/driver/financial-status \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NWI1YTUzYzcxYjcyYmE5YTJjOTgiLCJpYXQiOjE3NTA0MjQ0MTAsImV4cCI6MTc1MTAyOTIxMH0.kNoppPvNTyrWH67LFrTjCAW22mRPdEmMdkMDeCHJ8V8" | jq '.'
-
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100   196  100   196    0     0    299      0 --:--:-- --:--:-- --:--:--   298
-{
-  "success": true,
-  "kyc": {
-    "hasConnectAccount": false,
-    "status": "not_started",
-    "canReceivePayments": false,
-    "requiresOnboarding": false,
-    "connectAccountId": null,
-    "message": "Vérification KYC non démarrée"
-  }
-}
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100   543  100   543    0     0   1095      0 --:--:-- --:--:-- --:--:--  1096
-{
-  "success": true,
-  "data": {
-    "kyc": {
-      "hasConnectAccount": false,
-      "connectAccountId": null,
-      "status": "not_started",
-      "canReceivePayments": false,
-      "requiresOnboarding": true,
-      "message": "Commencez votre vérification pour recevoir des paiements",
-      "nextAction": "start_kyc",
-      "createdAt": null,
-      "verifiedAt": null,
-      "lastChecked": null,
-      "stripe": {
-        "chargesEnabled": false,
-        "payoutsEnabled": false,
-        "detailsSubmitted": false
-      }
-    },
-    "balance": null,
-    "payouts": null,
-    "summary": {
-      "hasStripeAccount": false,
-      "isVerified": false,
-      "canReceivePayments": false,
-      "availableBalance": 0,
-      "pendingBalance": 0
-    }
-  }
-}
                                                                                                                                                                         
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ # 5. Essayer de créer un trajet SANS KYC (doit être bloqué)
-curl -X POST http://localhost:3000/api/trips \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NWI1YTUzYzcxYjcyYmE5YTJjOTgiLCJpYXQiOjE3NTA0MjQ0MTAsImV4cCI6MTc1MTAyOTIxMH0.kNoppPvNTyrWH67LFrTjCAW22mRPdEmMdkMDeCHJ8V8" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "departure": {
-      "city": "Paris",
-      "address": "Gare de Lyon, 75012 Paris"
-    },
-    "arrival": {
-      "city": "Lyon",
-      "address": "Gare Part-Dieu, 69003 Lyon"
-    },
-    "departureDateTime": "2024-12-25T14:00:00.000Z",
-    "availableSeats": 3,
-    "distance": 465,
-    "description": "Trajet test Paris-Lyon"
-  }' | jq '.'
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100   844  100   510  100   334   1015    665 --:--:-- --:--:-- --:--:--  1677
-{
-  "success": false,
-  "message": "Vérification KYC requise pour créer des trajets payants",
-  "error": "KYC_VERIFICATION_REQUIRED",
-  "kyc": {
-    "status": "not_started",
-    "message": "Commencez votre vérification pour recevoir des paiements",
-    "nextAction": "start_kyc",
-    "requiresOnboarding": true,
-    "connectAccountId": null
-  },
-  "action": {
-    "type": "popup",
-    "title": "Vérification requise",
-    "description": "Vous devez vérifier votre identité pour créer des trajets payants",
-    "buttonText": "Commencer la vérification",
-    "redirectTo": "/kyc/start"
-  }
-}
-
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ # 6. Démarrer processus KYC
-curl -X POST http://localhost:3000/api/kyc/start \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NWI1YTUzYzcxYjcyYmE5YTJjOTgiLCJpYXQiOjE3NTA0MjQ0MTAsImV4cCI6MTc1MTAyOTIxMH0.kNoppPvNTyrWH67LFrTjCAW22mRPdEmMdkMDeCHJ8V8" \
-  -H "Content-Type: application/json" \
-  -d '{}' | jq '.'
-
-# 7. Obtenir lien onboarding
-curl -X GET http://localhost:3000/api/kyc/onboarding-link \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NWI1YTUzYzcxYjcyYmE5YTJjOTgiLCJpYXQiOjE3NTA0MjQ0MTAsImV4cCI6MTc1MTAyOTIxMH0.kNoppPvNTyrWH67LFrTjCAW22mRPdEmMdkMDeCHJ8V8" | jq '.'
-
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100   276  100   274    0     2     46      0  0:00:05  0:00:05 --:--:--    73
-{
-  "success": true,
-  "message": "KYC process started successfully",
-  "account": {
-    "id": "acct_1Rc4eUQKje90UhQF",
-    "type": "express",
-    "country": "FR"
-  },
-  "onboarding": {
-    "url": "https://connect.stripe.com/setup/e/acct_1Rc4eUQKje90UhQF/T2Q8CIettKv0",
-    "expires_at": 1750425106,
-    "expiresIn": "24 hours"
-  }
-}
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100    63  100    63    0     0    255      0 --:--:-- --:--:-- --:--:--   256
-{
-  "message": "Route not found",
-  "path": "/api/kyc/onboarding-link"
-}
-                                   
-                                   
-                                   
-                                   
-                                   
-                                   
-                                   ----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-# 8. Re-vérifier statut après KYC
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET http://localhost:3000/api/kyc/status \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NWI1YTUzYzcxYjcyYmE5YTJjOTgiLCJpYXQiOjE3NTA0MjQ0MTAsImV4cCI6MTc1MTAyOTIxMH0.kNoppPvNTyrWH67LFrTjCAW22mRPdEmMdkMDeCHJ8V8" | jq '.'
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100   211  100   211    0     0     80      0  0:00:02  0:00:02 --:--:--    80
-{
-  "success": true,
-  "kyc": {
-    "hasConnectAccount": true,
-    "status": "verified",
-    "canReceivePayments": true,
-    "requiresOnboarding": false,
-    "connectAccountId": "acct_1Rc4eUQKje90UhQF",
-    "message": "Compte vérifié et opérationnel"
-  }
-}
-   
-
-# 9. Essayer de créer trajet APRÈS KYC
-──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ # 9. Essayer de créer trajet APRÈS KYC
-curl -X POST http://localhost:3000/api/trips \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NWI1YTUzYzcxYjcyYmE5YTJjOTgiLCJpYXQiOjE3NTA0MjQ0MTAsImV4cCI6MTc1MTAyOTIxMH0.kNoppPvNTyrWH67LFrTjCAW22mRPdEmMdkMDeCHJ8V8" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "departure": {
-      "city": "Paris",
-      "address": "Gare de Lyon, 75012 Paris"
-    },
-    "arrival": {
-      "city": "Lyon",
-      "address": "Gare Part-Dieu, 69003 Lyon"
-    },
-    "departureDateTime": "2024-12-25T14:00:00.000Z",
-    "availableSeats": 3,
-    "distance": 465,
-    "description": "Trajet test Paris-Lyon après KYC"
-  }' | jq '.'
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100  1043  100   698  100   345    657    325  0:00:01  0:00:01 --:--:--   983
-{
-  "success": true,
-  "message": "Trajet créé avec succès",
-  "trip": {
-    "id": "68555f0c53c71b72ba9a2cab",
-    "departure": {
-      "city": "Paris",
-      "address": "Gare de Lyon, 75012 Paris",
-      "coordinates": {
-        "lat": 48.8566,
-        "lng": 2.3522
-      }
-    },
-    "arrival": {
-      "city": "Lyon",
-      "address": "Gare Part-Dieu, 69003 Lyon",
-      "coordinates": {
-        "lat": 45.764,
-        "lng": 4.8357
-      }
-    },
-    "departureDateTime": "2024-12-25T14:00:00.000Z",
-    "estimatedArrivalDateTime": "2024-12-25T19:10:00.000Z",
-    "availableSeats": 3,
-    "totalSeats": 4,
-    "pricePerSeat": 255.76,
-    "distance": 465,
-    "estimatedDuration": 310,
-    "description": "Trajet test Paris-Lyon après KYC",
-    "driver": {
-      "id": "68555b5a53c71b72ba9a2c98",
-      "displayName": "Marie Test",
-      "email": "marietest@gmail.com"
-    },
-    "createdAt": "2025-06-20T13:15:56.404Z"
-  }
-}
- 
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
-❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️
-
-
-
 ┌──(franck㉿f504)-[~/Documents/entrelles-backend]
 └─$ curl -X POST http://localhost:3000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "marie@gmail.com",
-    "password": "Test123456",
-    "displayName": "Marie Dubois",
-    "firstName": "Marie",
-    "lastName": "Dubois",
+    "email": "miravo@gmail.com",
+    "password": "123azeqsD",
+    "displayName": "Miravo Conductrice",
+    "firstName": "Miravo",
+    "lastName": "Driver",
     "gender": "femme",
-    "phone": "+33612345678"
+    "phone": "+33111222333"
   }'
 
-{"success":true,"message":"Registration successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0MzEyNjgsImV4cCI6MTc1MTAzNjA2OH0.aEy8y0HFx7PrSrv_WVxHpygOhNZEOAbxHwZosr0DOyk","user":{"id":"685576236f728199bb6ec103","email":"marie@gmail.com","profile":{"displayName":"Marie Dubois","firstName":"Marie","lastName":"Dubois","avatar":"","gender":"femme"},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false},"stats":{"tripsAsDriver":0,"tripsAsPassenger":0,"tripsCompleted":0,"rating":0,"ratingsCount":0,"totalEarnings":0,"responseTime":0,"cancellationRate":0},"createdAt":"2025-06-20T14:54:27.450Z"}} 
-
-
+{"success":true,"message":"Registration successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c","user":{"id":"685768efa0050448a3325b16","email":"miravo@gmail.com","profile":{"displayName":"Miravo Conductrice","firstName":"Miravo","lastName":"Driver","avatar":"","gender":"femme"},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false},"stats":{"tripsAsDriver":0,"tripsAsPassenger":0,"tripsCompleted":0,"rating":0,"ratingsCount":0,"totalEarnings":0,"responseTime":0,"cancellationRate":0},"createdAt":"2025-06-22T02:22:39.135Z"}}                                                                                                                                                                        
 ┌──(franck㉿f504)-[~/Documents/entrelles-backend]
 └─$ curl -X POST http://localhost:3000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "sophie@gmail.com",
-    "password": "Test123456",
-    "displayName": "Sophie Martin",
-    "firstName": "Sophie",
-    "lastName": "Martin",
+    "email": "fanasina@gmail.com",
+    "password": "123azeqsD",
+    "displayName": "Fanasina Passagère",
+    "firstName": "Fanasina",
+    "lastName": "Passenger",
     "gender": "femme",
-    "phone": "+33687654321"
+    "phone": "+33444555666"
   }'
 
-{"success":true,"message":"Registration successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzY0NjZmNzI4MTk5YmI2ZWMxMDciLCJpYXQiOjE3NTA0MzEzMDMsImV4cCI6MTc1MTAzNjEwM30.HkR5QOEGrI42ZfP1iX2jQ72AIzYoVvv1wOK9RL-Gwi4","user":{"id":"685576466f728199bb6ec107","email":"sophie@gmail.com","profile":{"displayName":"Sophie Martin","firstName":"Sophie","lastName":"Martin","avatar":"","gender":"femme"},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false},"stats":{"tripsAsDriver":0,"tripsAsPassenger":0,"tripsCompleted":0,"rating":0,"ratingsCount":0,"totalEarnings":0,"responseTime":0,"cancellationRate":0},"createdAt":"2025-06-20T14:55:02.928Z"}}  
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-curl -X GET http://localhost:3000/api/kyc/status \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0MzEyNjgsImV4cCI6MTc1MTAzNjA2OH0.aEy8y0HFx7PrSrv_WVxHpygOhNZEOAbxHwZosr0DOyk"
-
+{"success":true,"message":"Registration successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-l60NsCluj32kT_Jb2ltIRlsJ0aKzayD9Ks","user":{"id":"685768f7a0050448a3325b1a","email":"fanasina@gmail.com","profile":{"displayName":"Fanasina Passagère","firstName":"Fanasina","lastName":"Passenger","avatar":"","gender":"femme"},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false},"stats":{"tripsAsDriver":0,"tripsAsPassenger":0,"tripsCompleted":0,"rating":0,"ratingsCount":0,"totalEarnings":0,"responseTime":0,"cancellationRate":0},"createdAt":"2025-06-22T02:22:47.728Z"}}                                                                                                                                                                        
 ┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET http://localhost:3000/api/kyc/status \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0MzEyNjgsImV4cCI6MTc1MTAzNjA2OH0.aEy8y0HFx7PrSrv_WVxHpygOhNZEOAbxHwZosr0DOyk"
-{"success":true,"kyc":{"hasConnectAccount":false,"status":"not_started","canReceivePayments":false,"requiresOnboarding":false,"connectAccountId":null,"message":"Vérification KYC non démarrée"}}                                                                                                                                                                        
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-curl -X POST http://localhost:3000/api/kyc/start \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0MzEyNjgsImV4cCI6MTc1MTAzNjA2OH0.aEy8y0HFx7PrSrv_WVxHpygOhNZEOAbxHwZosr0DOyk" \
+└─$ curl -X POST http://localhost:3000/api/payments/subscribe \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
   -H "Content-Type: application/json" \
   -d '{
-    "country": "FR",
-    "type": "express"
+    "priceId": "price_1RYa3b4GtFeoWSgT7uK1TC0I"
   }'
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"success":true,"message":"🎉 Bienvenue dans Entrelles Premium !","subscription":{"id":"sub_1Rcda24GtFeoWSgT3ziiucyk","status":"active","isActive":true}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~/Documents/entrelles-backend]
+└─$ curl -X POST http://localhost:3000/api/payments/subscribe \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-l60NsCluj32kT_Jb2ltIRlsJ0aKzayD9Ks" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "priceId": "price_1RYa3b4GtFeoWSgT7uK1TC0I"
+  }'
 
-
-
+{"success":true,"message":"🎉 Bienvenue dans Entrelles Premium !","subscription":{"id":"sub_1RcdaO4GtFeoWSgTm8c3Rv7u","status":"active","isActive":true}}                                                                                                                                                                        
 ┌──(franck㉿f504)-[~/Documents/entrelles-backend]
 └─$ curl -X POST http://localhost:3000/api/kyc/start \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0MzEyNjgsImV4cCI6MTc1MTAzNjA2OH0.aEy8y0HFx7PrSrv_WVxHpygOhNZEOAbxHwZosr0DOyk" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "country": "FR",
-    "type": "express"
-  }'
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
+  -H "Content-Type: application/json"
 
-{"success":true,"message":"KYC process started successfully","account":{"id":"acct_1Rc6NfQMtdk0MJdM","type":"express","country":"FR"},"onboarding":{"url":"https://connect.stripe.com/setup/e/acct_1Rc6NfQMtdk0MJdM/PTGD2E5PTKmo","expires_at":1750431751,"expiresIn":"24 hours"}}                                                                                                                                                                        
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-# En mode test, on peut simuler la validation
+{"success":true,"message":"KYC process started successfully","account":{"id":"acct_1RcdkG4CQCv9UG1T","type":"express","country":"FR"},"onboarding":{"url":"https://connect.stripe.com/setup/e/acct_1RcdkG4CQCv9UG1T/XXaKyW8nQAoL","expires_at":1750560004,"expiresIn":"24 hours"}}                                                                                                                                                                        
 ┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/kyc/simulate-verification \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0MzEyNjgsImV4cCI6MTc1MTAzNjA2OH0.aEy8y0HFx7PrSrv_WVxHpygOhNZEOAbxHwZosr0DOyk" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "simulate": "verified"
-  }'
-{"message":"Route not found","path":"/api/kyc/simulate-verification"}                                                                                                                                                                        
+└─$ curl -X POST http://localhost:3000/api/kyc/refresh \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
+  -H "Content-Type: application/json"
 
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-curl -X POST http://localhost:3000/api/trips \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0MzEyNjgsImV4cCI6MTc1MTAzNjA2OH0.aEy8y0HFx7PrSrv_WVxHpygOhNZEOAbxHwZosr0DOyk" \
+{"success":true,"message":"KYC status refreshed successfully","kyc":{"status":"verified","canReceivePayments":true,"requiresOnboarding":false,"lastChecked":"2025-06-22T02:38:37.988Z","verifiedAt":"2025-06-22T02:37:41.562Z"}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~/Documents/entrelles-backend]
+└─$ curl -X POST http://localhost:3000/api/trips \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
   -H "Content-Type: application/json" \
   -d '{
     "departure": {
-      "city": "Paris",
-      "address": "Gare de Lyon, 75012 Paris",
-      "coordinates": { "lat": 48.8447, "lng": 2.3744 }
+      "city": "Marseille"
     },
     "arrival": {
-      "city": "Lyon",
-      "address": "Gare Part-Dieu, 69003 Lyon", 
-      "coordinates": { "lat": 45.7606, "lng": 4.8598 }
+      "city": "Nice"
     },
-    "departureDateTime": "2024-12-20T14:00:00.000Z",
-    "availableSeats": 3,
-    "distance": 465,
-    "estimatedDuration": 300,
-    "pricePerSeat": 45,
-    "description": "Trajet Paris-Lyon, départ Gare de Lyon"
+    "departureDateTime": "2025-06-23T10:00:00.000Z",
+    "availableSeats": 2,
+    "description": "Trajet Marseille-Nice avec Miravo, vue sur la mer !"
   }'
 
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/trips/search?departureCity=Paris&arrivalCity=Lyon" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzY0NjZmNzI4MTk5YmI2ZWMxMDciLCJpYXQiOjE3NTA0MzEzMDMsImV4cCI6MTc1MTAzNjEwM30.HkR5QOEGrI42ZfP1iX2jQ72AIzYoVvv1wOK9RL-Gwi4"
-{"success":true,"message":"1 trajet(s) trouvé(s)","data":[{"id":"685598e56f728199bb6ec132","departure":{"coordinates":{"lat":48.8447,"lng":2.3744},"city":"Paris","address":"Gare de Lyon, 75012 Paris"},"arrival":{"coordinates":{"lat":45.7606,"lng":4.8598},"city":"Lyon","address":"Gare Part-Dieu, 69003 Lyon"},"departureDateTime":"2025-12-20T14:00:00.000Z","estimatedArrivalDateTime":"2025-12-20T19:00:00.000Z","availableSeats":3,"totalSeats":4,"pricePerSeat":45,"distance":465,"estimatedDuration":300,"description":"Trajet Paris-Lyon, départ Gare de Lyon","notes":"Merci de confirmer votre présence 30min avant le départ","status":"active","driver":{"id":"685576236f728199bb6ec103","displayName":"Marie Dubois","firstName":"Marie","lastName":"Dubois","avatar":"https://api.entrelles.com/avatars/default.jpg","bio":"Conductrice expérimentée, j'aime les trajets dans la bonne humeur !","rating":4.549847021930663,"ratingsCount":14,"memberSince":"2025-06-20T14:54:27.450Z","isVerified":false,"stats":{"tripsAsDriver":16,"tripsCompleted":27,"totalKilometers":36686}},"vehicle":{"id":"vehicle_685598e56f728199bb6ec132","brand":"Renault","model":"Clio","color":"Bleu","year":2020,"licensePlate":"XX-XXX-XX","fuelType":"Essence","comfort":"Premium","features":["Climatisation","Bluetooth","GPS","USB"]},"preferences":{"allowSmoking":false,"allowPets":true,"allowFood":true,"musicPreference":"medium","chatLevel":"normal","maxDetour":10,"luggageSpace":"large"},"stats":{"views":158,"bookingRequests":7,"bookingsConfirmed":0,"lastViewedAt":"2025-06-20T17:22:45.215Z"},"createdAt":"2025-06-20T17:22:45.215Z","updatedAt":"2025-06-20T17:22:45.215Z","contact":{"allowDirectMessage":true,"allowPhoneContact":true,"responseTime":"< 24h"},"booking":{"instantBooking":false,"requiresApproval":true,"cancellationPolicy":"moderate","advanceBookingHours":1}}],"pagination":{"page":1,"limit":10,"total":1,"pages":1,"hasNext":false,"hasPrev":false},"filters":{"applied":{"departureCity":"Paris","arrivalCity":"Lyon","passengers":1},"available":{"sortOptions":["departureDateTime","pricePerSeat","distance","estimatedDuration"],"priceRange":{"min":5,"max":100},"durationRange":{"min":30,"max":720}}}}                                                                                                                                            
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
+{"success":true,"message":"Trajet créé avec succès","trip":{"id":"68576cfd812dc266e2a83083","departure":{"city":"Marseille","address":"Vieux-Port, 13002 Marseille","coordinates":{"lat":43.2965,"lng":5.3698}},"arrival":{"city":"Nice","address":"Gare de Nice-Ville, 06000 Nice","coordinates":{"lat":43.7102,"lng":7.262}},"departureDateTime":"2025-06-23T10:00:00.000Z","estimatedArrivalDateTime":"2025-06-23T15:06:00.000Z","availableSeats":2,"totalSeats":4,"pricePerSeat":253.01,"distance":460,"estimatedDuration":306,"description":"Trajet Marseille-Nice avec Miravo, vue sur la mer !","driver":{"id":"685768efa0050448a3325b16","displayName":"Miravo Conductrice","email":"miravo@gmail.com"},"createdAt":"2025-06-22T02:39:57.576Z"}}                                                                                                                                                                        
 ┌──(franck㉿f504)-[~/Documents/entrelles-backend]
 └─$ curl -X POST http://localhost:3000/api/bookings \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzY0NjZmNzI4MTk5YmI2ZWMxMDciLCJpYXQiOjE3NTA0MzEzMDMsImV4cCI6MTc1MTAzNjEwM30.HkR5QOEGrI42ZfP1iX2jQ72AIzYoVvv1wOK9RL-Gwi4" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-l60NsCluj32kT_Jb2ltIRlsJ0aKzayD9Ks" \
   -H "Content-Type: application/json" \
   -d '{
-    "tripId": "685598e56f728199bb6ec132",
-    "numberOfSeats": 2,
-    "message": "Bonjour Marie, je souhaite réserver 2 places pour Lyon !"
+    "tripId": "68576cfd812dc266e2a83083",
+    "numberOfSeats": 1,
+    "message": "Salut Miravo ! J'\''aimerais beaucoup faire ce trajet vers Nice. Merci !"
   }'
 
-{"success":true,"message":"Booking request created successfully","booking":{"id":"685599be6f728199bb6ec13b","trip":{"id":"685598e56f728199bb6ec132","departure":{"coordinates":{"lat":48.8447,"lng":2.3744},"city":"Paris","address":"Gare de Lyon, 75012 Paris"},"arrival":{"coordinates":{"lat":45.7606,"lng":4.8598},"city":"Lyon","address":"Gare Part-Dieu, 69003 Lyon"},"distance":465},"passenger":{"id":"685576466f728199bb6ec107","displayName":"Sophie Martin"},"driver":{"id":"685576236f728199bb6ec103","displayName":"Marie Dubois","avatar":"","phone":"+33612345678"},"numberOfSeats":2,"totalPrice":90,"status":"pending","message":"Bonjour Marie, je souhaite réserver 2 places pour Lyon !","payment":{"status":"processing","amount":51151,"currency":"eur","clientSecret":"pi_3Rc8hw4GtFeoWSgT02UHBhtN_secret_pjilBdxYfrFMr3Nqv1nQrUeBc","requiresPayment":true},"requestedAt":"2025-06-20T17:26:22.458Z"}}   
+{"success":true,"message":"Booking request created successfully","booking":{"id":"68576d47812dc266e2a8308a","trip":{"id":"68576cfd812dc266e2a83083","route":"Marseille → Nice","departureDateTime":"2025-06-23T10:00:00.000Z","distance":460},"passenger":{"id":"685768f7a0050448a3325b1a","name":"Fanasina Passagère","email":"fanasina@gmail.com"},"driver":{"id":"685768efa0050448a3325b16","name":"Miravo Conductrice","email":"miravo@gmail.com"},"numberOfSeats":1,"totalPrice":253.01,"status":"pending","requestedAt":"2025-06-22T02:41:11.310Z"}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~/Documents/entrelles-backend]
+└─$ curl -X PUT http://localhost:3000/api/bookings/68576d47812dc266e2a8308a/confirm \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
+  -H "Content-Type: application/json"
 
+{"success":false,"message":"Only the driver can confirm bookings"}                                                                                                                                                                        
+┌──(franck㉿f504)-[~/Documents/entrelles-backend]
+└─$ curl -X GET http://localhost:3000/api/bookings/68576d47812dc266e2a8308a \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c"
 
+{"success":false,"message":"Not authorized to view this booking"}                                                                                                                                                                        
+┌──(franck㉿f504)-[~/Documents/entrelles-backend]
+└─$ curl -X PUT http://localhost:3000/api/bookings/68576d47812dc266e2a8308a/accept \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
+  -H "Content-Type: application/json"
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"message":"Route not found","path":"/api/bookings/68576d47812dc266e2a8308a/accept"}                                                                                                                                                                        
+┌──(franck㉿f504)-[~/Documents/entrelles-backend]
+└─$ curl -X PUT http://localhost:3000/api/bookings/68576d47812dc266e2a8308a/approve \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
+  -H "Content-Type: application/json"
 
+{"message":"Route not found","path":"/api/bookings/68576d47812dc266e2a8308a/approve"}                                                                                                                                                                        
+┌──(franck㉿f504)-[~/Documents/entrelles-backend]
+└─$ sed -i 's/req.user.id &&/req.user.id.toString() \&\&/' controllers/bookingController.js
+sed -i 's/req.user.id) {/req.user.id.toString()) {/' controllers/bookingController.js
 
+                                                                                                                                                                        
+┌──(franck㉿f504)-[~/Documents/entrelles-backend]
+└─$ curl -X PUT http://localhost:3000/api/bookings/68576d47812dc266e2a8308a/confirm \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
+  -H "Content-Type: application/json"
+
+{"success":true,"message":"Booking confirmed successfully","booking":{"id":"68576d47812dc266e2a8308a","status":"confirmed","confirmedAt":"2025-06-22T02:56:59.915Z","trip":{"route":"Marseille → Nice","date":"2025-06-23T10:00:00.000Z"},"passenger":{"name":"Fanasina Passagère","email":"fanasina@gmail.com"}}}                                                                                                                                                                        
 ┌──(franck㉿f504)-[~/Documents/entrelles-backend]
 └─$ curl -X POST http://localhost:3000/api/payments/create-trip-payment \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzY0NjZmNzI4MTk5YmI2ZWMxMDciLCJpYXQiOjE3NTA0MzEzMDMsImV4cCI6MTc1MTAzNjEwM30.HkR5QOEGrI42ZfP1iX2jQ72AIzYoVvv1wOK9RL-Gwi4" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-l60NsCluj32kT_Jb2ltIRlsJ0aKzayD9Ks" \
   -H "Content-Type: application/json" \
   -d '{
-    "bookingId": "685599be6f728199bb6ec13b",
-    "distance": 465,
-    "seats": 2
+    "bookingId": "68576d47812dc266e2a8308a"
   }'
 
-{"success":true,"message":"Payment created with automatic transfer to driver","paymentIntent":{"id":"pi_3Rc9gs4GtFeoWSgT00aJvS8Y","clientSecret":"pi_3Rc9gs4GtFeoWSgT00aJvS8Y_secret_8tIIN8heHjC7CSH1Hp0kEhTnG","amount":51150,"currency":"eur"},"booking":{"id":"685599be6f728199bb6ec13b","status":"pending","trip":{"route":"Paris → Lyon","date":"2025-12-20T14:00:00.000Z","distance":465}},"breakdown":{"totalEur":511.5,"driverEur":418.5,"commissionEur":93,"calculation":"465km × 2 places × 0.55€/place/km","details":{"distance":465,"seats":2,"pricePerSeatPerKm":0.55}},"kycInfo":null} 
-
-
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
+{"success":true,"message":"Payment created with automatic transfer","paymentIntent":{"id":"pi_3Rce824GtFeoWSgT1OSle6m5","clientSecret":"pi_3Rce824GtFeoWSgT1OSle6m5_secret_VxFzuqrRjMhLqSGoKiRbk1Ol3","amount":25300,"currency":"eur"},"breakdown":{"totalEur":253,"driverEur":207,"commissionEur":46}}                                                                                                                                                                        
 ┌──(franck㉿f504)-[~/Documents/entrelles-backend]
 └─$ curl -X POST http://localhost:3000/api/payments/finalize-trip-payment \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzY0NjZmNzI4MTk5YmI2ZWMxMDciLCJpYXQiOjE3NTA0MzEzMDMsImV4cCI6MTc1MTAzNjEwM30.HkR5QOEGrI42ZfP1iX2jQ72AIzYoVvv1wOK9RL-Gwi4" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
   -H "Content-Type: application/json" \
   -d '{
-    "bookingId": "685599be6f728199bb6ec13b",
+    "bookingId": "68576d47812dc266e2a8308a",
     "paymentMethodId": "pm_card_visa"
   }'
 
-{"success":true,"message":"Trip payment finalized successfully","booking":{"id":"685599be6f728199bb6ec13b","status":"confirmed","trip":{"route":"Paris → Lyon","date":"2025-12-20T14:00:00.000Z"},"payment":{"status":"succeeded","amount":511.5,"paidAt":"2025-06-20T18:52:14.771Z","driverPayout":{"status":"scheduled","amount":41850,"scheduledDate":"2025-06-27T18:52:14.772Z"}}},"paymentIntent":{"id":"pi_3Rc9gs4GtFeoWSgT00aJvS8Y","status":"succeeded","amount":51150}}                                                                                                                                                                        
+{"success":false,"message":"Invalid token"}                                                                                                                                                                        
+┌──(franck㉿f504)-[~/Documents/entrelles-backend]
+└─$ curl -X POST http://localhost:3000/api/payments/finalize-trip-payment \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-l60NsCluj32kT_Jb2ltIRlsJ0aKzayD9Ks" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bookingId": "68576d47812dc266e2a8308a",
+    "paymentMethodId": "pm_card_visa"
+  }'
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"success":true,"message":"🎉 Paiement finalisé avec succès !","booking":{"id":"68576d47812dc266e2a8308a","status":"confirmed","amount":253}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~/Documents/entrelles-backend]
+└─$ # Vérifier le statut de la réservation
+curl -X GET http://localhost:3000/api/bookings/68576d47812dc266e2a8308a \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-l60NsCluj32kT_Jb2ltIRlsJ0aKzayD9Ks"
 
-
-
+{"success":true,"booking":{"payment":{"commission":{"appFee":0,"driverAmount":0,"processingFee":0,"totalAmount":0},"driverPayout":{"status":[]},"stripePaymentIntentId":"pi_3Rce824GtFeoWSgT1OSle6m5","stripeClientSecret":"pi_3Rce824GtFeoWSgT1OSle6m5_secret_VxFzuqrRjMhLqSGoKiRbk1Ol3","amount":25300,"currency":"eur","status":"succeeded","driverAmount":20700,"commissionAmount":4600,"refundAmount":0,"paidAt":"2025-06-22T03:03:18.377Z","receiptUrl":"https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xUllPZlo0R3RGZW9XU2dUKPXk3cIGMgY42FM6NRk6LBYwlvw6aRtQ7yyLTXQafJ0ogf0ROw_qubRKLI5Bo9h_g9IyIR64ndXm3Uzl","stripeChargeId":"ch_3Rce824GtFeoWSgT1Y30tiKH"},"metadata":{"source":"web"},"_id":"68576d47812dc266e2a8308a","trip":{"departure":{"coordinates":{"lat":43.2965,"lng":5.3698},"city":"Marseille","address":"Vieux-Port, 13002 Marseille"},"arrival":{"coordinates":{"lat":43.7102,"lng":7.262},"city":"Nice","address":"Gare de Nice-Ville, 06000 Nice"},"vehicle":{"fuelType":"Essence"},"preferences":{"allowSmoking":false,"allowPets":false,"allowFood":true,"musicPreference":"medium","chatLevel":"normal","maxDetour":10},"recurrence":{"daysOfWeek":[]},"stats":{"views":0,"bookingRequests":0},"_id":"68576cfd812dc266e2a83083","driver":"685768efa0050448a3325b16","departureDateTime":"2025-06-23T10:00:00.000Z","estimatedArrivalDateTime":"2025-06-23T15:06:00.000Z","estimatedDuration":306,"availableSeats":1,"totalSeats":4,"pricePerSeat":253.01,"distance":460,"description":"Trajet Marseille-Nice avec Miravo, vue sur la mer !","status":"active","isRecurring":false,"createdAt":"2025-06-22T02:39:57.576Z","updatedAt":"2025-06-22T02:57:00.527Z","__v":0},"passenger":{"profile":{"displayName":"Fanasina Passagère","avatar":""},"_id":"685768f7a0050448a3325b1a","email":"fanasina@gmail.com"},"driver":{"profile":{"displayName":"Miravo Conductrice","avatar":""},"_id":"685768efa0050448a3325b16","email":"miravo@gmail.com"},"numberOfSeats":1,"totalPrice":253.01,"status":"confirmed","message":"Salut Miravo ! J'aimerais beaucoup faire ce trajet vers Nice. Merci !","requestedAt":"2025-06-22T02:41:11.310Z","createdAt":"2025-06-22T02:41:11.311Z","updatedAt":"2025-06-22T03:03:18.538Z","__v":1,"confirmedAt":"2025-06-22T03:03:18.378Z"}}                                                                                                                                                                        
 ┌──(franck㉿f504)-[~/Documents/entrelles-backend]
 └─$ curl -X GET http://localhost:3000/api/payments/driver/financial-status \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0MzEyNjgsImV4cCI6MTc1MTAzNjA2OH0.aEy8y0HFx7PrSrv_WVxHpygOhNZEOAbxHwZosr0DOyk"
-{"success":true,"data":{"kyc":{"hasConnectAccount":true,"connectAccountId":"acct_1Rc6NfQMtdk0MJdM","status":"verified","canReceivePayments":true,"requiresOnboarding":true,"message":"Compte vérifié, vous pouvez recevoir des paiements","nextAction":"none","createdAt":"2025-06-20T14:57:30.919Z","verifiedAt":null,"lastChecked":"2025-06-20T18:11:30.240Z","stripe":{"chargesEnabled":false,"payoutsEnabled":false,"detailsSubmitted":false}},"balance":{"available":[{"amount":0,"currency":"eur","source_types":{"card":0}}],"pending":[{"amount":41850,"currency":"eur","source_types":{"card":41850}}],"totalAvailable":0,"totalPending":418.5},"payouts":[],"summary":{"hasStripeAccount":true,"isVerified":true,"canReceivePayments":true,"canReceivePayouts":false,"availableBalance":0,"pendingBalance":418.5}}}                                                                                                                                                                        
-
-
-😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊😊
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST "http://localhost:3000/api/trips" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1ZDFjYjExOGE5YjQ0ZjJmOWRhYmQiLCJpYXQiOjE3NTA0NTQ3MzEsImV4cCI6MTc1MTA1OTUzMX0.HeLotjmM-UFBLqJkhHRvSpYWcELQNpudUc4cz95Xwvg" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "departure": {
-      "city": "Paris", 
-      "address": "Gare du Nord", 
-      "coordinates": {"lat": 48.8566, "lng": 2.3522}
-    },
-    "arrival": {
-      "city": "Lyon", 
-      "address": "Gare Part-Dieu", 
-      "coordinates": {"lat": 45.7640, "lng": 4.8357}
-    },
-    "departureDateTime": "2024-12-25T10:00:00Z",
-    "estimatedDuration": 240,
-    "availableSeats": 3,
-    "pricePerSeat": 25,
-    "distance": 465
-  }'
-{"success":false,"message":"Abonnement premium requis","error":"SUBSCRIPTION_REQUIRED","subscription":{"status":"no_subscription","plan":"free","isActive":false},"action":{"type":"subscription_required","title":"Abonnement requis","description":"Cette fonctionnalité nécessite un abonnement premium actif","buttonText":"S'abonner maintenant","redirectTo":"/subscription/plans"}} 
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/bookings" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1ZDFjYjExOGE5YjQ0ZjJmOWRhYmQiLCJpYXQiOjE3NTA0NTQ3MzEsImV4cCI6MTc1MTA1OTUzMX0.HeLotjmM-UFBLqJkhHRvSpYWcELQNpudUc4cz95Xwvg"
-
-{"success":false,"message":"Abonnement premium requis","error":"SUBSCRIPTION_REQUIRED","subscription":{"status":"no_subscription","plan":"free","isActive":false},"action":{"type":"subscription_required","title":"Abonnement requis","description":"Cette fonctionnalité nécessite un abonnement premium actif","buttonText":"S'abonner maintenant","redirectTo":"/subscription/plans"}} 
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST "http://localhost:3000/api/users/upload-avatar" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0NTc2OTUsImV4cCI6MTc1MTA2MjQ5NX0.5P3h03K6CCnj58cyK0DLxAISiCD5ZbHZ85nn7KfVQdU" \
-  -F "avatar=@/home/franck/Documents/reserve/images.jpeg"
-
-{"success":true,"message":"Avatar mis à jour avec succès","avatar":{"url":"https://res.cloudinary.com/duiyjjm34/image/upload/v1750459259/entrelles/avatars/avatar_685576236f728199bb6ec103_1750459256854.jpg","publicId":"entrelles/avatars/avatar_685576236f728199bb6ec103_1750459256854","width":300,"height":300},"user":{"id":"685576236f728199bb6ec103","profile":{"displayName":"Marie Dubois","avatar":"https://res.cloudinary.com/duiyjjm34/image/upload/v1750459259/entrelles/avatars/avatar_685576236f728199bb6ec103_1750459256854.jpg"}}}  
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X PUT "http://localhost:3000/api/users/profile" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0NTc2OTUsImV4cCI6MTc1MTA2MjQ5NX0.5P3h03K6CCnj58cyK0DLxAISiCD5ZbHZ85nn7KfVQdU" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "displayName": "Marie Dubois ✨",
-    "bio": "Conductrice passionnée avec avatar Cloudinary !",
-    "phone": "+33123456789",
-    "address": {
-      "city": "Paris",
-      "postalCode": "75001",
-      "country": "France"
-    },
-    "preferences": {
-      "allowSmoking": false,
-      "allowPets": true,
-      "musicPreference": "high",
-      "chatLevel": "high"
-    }
-  }'
-
-{"success":true,"message":"Profil mis à jour avec succès","user":{"id":"685576236f728199bb6ec103","email":"marie@gmail.com","profile":{"address":{"coordinates":{},"country":"France","city":"Paris","postalCode":"75001"},"displayName":"Marie Dubois ✨","firstName":"Marie","lastName":"Dubois","gender":"femme","phone":"+33123456789","avatar":"https://res.cloudinary.com/duiyjjm34/image/upload/v1750459259/entrelles/avatars/avatar_685576236f728199bb6ec103_1750459256854.jpg","bio":"Conductrice passionnée avec avatar Cloudinary !"},"preferences":{"allowSmoking":false,"allowPets":true,"allowFood":true,"musicPreference":"high","chatLevel":"high","maxDetour":10,"autoAcceptBookings":false},"stats":{"tripsAsDriver":0,"tripsAsPassenger":0,"tripsCompleted":0,"rating":0,"ratingsCount":0,"totalEarnings":0,"responseTime":0,"cancellationRate":0},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false,"identityDocuments":[]},"updatedAt":"2025-06-21T02:12:31.480Z"}}   
-
-
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/bookings/driver/requests" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0NTc2OTUsImV4cCI6MTc1MTA2MjQ5NX0.5P3h03K6CCnj58cyK0DLxAISiCD5ZbHZ85nn7KfVQdU" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
   -H "Content-Type: application/json"
 
-{"success":true,"message":"0 demande(s) trouvée(s)","count":0,"requests":[]}                                                                                                                                                                        
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
+{"message":"Route not found","path":"/api/payments/driver/financial-status"}                                                                                                                                                                        
 ┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/bookings/history" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0NTc2OTUsImV4cCI6MTc1MTA2MjQ5NX0.5P3h03K6CCnj58cyK0DLxAISiCD5ZbHZ85nn7KfVQdU" \
+└─$ curl -X GET http://localhost:3000/api/payments/driver/financial-status \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
   -H "Content-Type: application/json"
 
-{"success":true,"message":"Historique récupéré (1 réservations)","data":[{"id":"685599be6f728199bb6ec13b","trip":{"departure":{"coordinates":{"lat":48.8447,"lng":2.3744},"city":"Paris","address":"Gare de Lyon, 75012 Paris"},"arrival":{"coordinates":{"lat":45.7606,"lng":4.8598},"city":"Lyon","address":"Gare Part-Dieu, 69003 Lyon"},"_id":"685598e56f728199bb6ec132","departureDateTime":"2025-12-20T14:00:00.000Z","pricePerSeat":45,"distance":465,"status":"active"},"passenger":{"profile":{"displayName":"Sophie Martin","avatar":""},"stats":{"rating":0},"_id":"685576466f728199bb6ec107"},"driver":{"profile":{"displayName":"Marie Dubois ✨","avatar":"https://res.cloudinary.com/duiyjjm34/image/upload/v1750459259/entrelles/avatars/avatar_685576236f728199bb6ec103_1750459256854.jpg"},"stats":{"rating":0},"_id":"685576236f728199bb6ec103"},"numberOfSeats":2,"totalPrice":90,"status":"confirmed","message":"Bonjour Marie, je souhaite réserver 2 places pour Lyon !","requestedAt":"2025-06-20T17:26:22.458Z","confirmedAt":"2025-06-20T18:52:15.278Z","review":{},"payment":{"status":"succeeded","amount":51150,"currency":"eur","paidAt":"2025-06-20T18:52:15.278Z","refundAmount":0},"userRole":"driver"}],"pagination":{"page":1,"limit":20,"total":1,"pages":1,"hasNext":false,"hasPrev":false},"filters":{"applied":{"type":"all","status":"all"}}} 
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
-──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/bookings/" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0NTc2OTUsImV4cCI6MTc1MTA2MjQ5NX0.5P3h03K6CCnj58cyK0DLxAISiCD5ZbHZ85nn7KfVQdU" \
-  -H "Content-Type: application/json"
-{"success":true,"count":1,"bookings":[{"id":"685599be6f728199bb6ec13b","trip":{"departure":{"coordinates":{"lat":48.8447,"lng":2.3744},"city":"Paris","address":"Gare de Lyon, 75012 Paris"},"arrival":{"coordinates":{"lat":45.7606,"lng":4.8598},"city":"Lyon","address":"Gare Part-Dieu, 69003 Lyon"},"_id":"685598e56f728199bb6ec132","departureDateTime":"2025-12-20T14:00:00.000Z","pricePerSeat":45},"passenger":{"profile":{"displayName":"Sophie Martin","avatar":""},"_id":"685576466f728199bb6ec107"},"driver":{"profile":{"displayName":"Marie Dubois ✨","avatar":"https://res.cloudinary.com/duiyjjm34/image/upload/v1750459259/entrelles/avatars/avatar_685576236f728199bb6ec103_1750459256854.jpg"},"_id":"685576236f728199bb6ec103"},"numberOfSeats":2,"totalPrice":90,"status":"confirmed","message":"Bonjour Marie, je souhaite réserver 2 places pour Lyon !","requestedAt":"2025-06-20T17:26:22.458Z","confirmedAt":"2025-06-20T18:52:15.278Z","review":{},"payment":{"status":"succeeded","amount":51150,"currency":"eur","paidAt":"2025-06-20T18:52:15.278Z","commission":{"appFee":9300,"driverAmount":41850,"processingFee":0,"totalAmount":51150},"driverPayout":{"status":"scheduled","amount":41850,"scheduledDate":"2025-06-27T18:52:14.772Z"}}}]}  
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/bookings/stats" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0NTc2OTUsImV4cCI6MTc1MTA2MjQ5NX0.5P3h03K6CCnj58cyK0DLxAISiCD5ZbHZ85nn7KfVQdU" \
-  -H "Content-Type: application/json"
-{"success":true,"stats":{"asPassenger":{},"asDriver":{"confirmed":{"count":1,"totalAmount":90,"totalPaid":0,"totalEarnings":41850}},"payments":{"pendingPayouts":{"count":1,"totalAmount":41850,"bookings":[{"bookingId":"685599be6f728199bb6ec13b","amount":41850,"status":"scheduled","scheduledDate":"2025-06-27T18:52:14.772Z","seats":2}]},"recentRefunds":[]}}}  
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/bookings/driver/requests?status=confirmed" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0NTc2OTUsImV4cCI6MTc1MTA2MjQ5NX0.5P3h03K6CCnj58cyK0DLxAISiCD5ZbHZ85nn7KfVQdU" \
-  -H "Content-Type: application/json"
-
-{"success":true,"message":"1 demande(s) trouvée(s)","count":1,"requests":[{"id":"685599be6f728199bb6ec13b","trip":{"id":"685598e56f728199bb6ec132","departure":{"coordinates":{"lat":48.8447,"lng":2.3744},"city":"Paris","address":"Gare de Lyon, 75012 Paris"},"arrival":{"coordinates":{"lat":45.7606,"lng":4.8598},"city":"Lyon","address":"Gare Part-Dieu, 69003 Lyon"},"departureDateTime":"2025-12-20T14:00:00.000Z","pricePerSeat":45,"distance":465,"status":"active"},"passenger":{"id":"685576466f728199bb6ec107","displayName":"Sophie Martin","avatar":"","phone":"+33687654321","rating":0,"tripsCompleted":0,"isEmailVerified":false},"numberOfSeats":2,"totalPrice":90,"status":"confirmed","message":"Bonjour Marie, je souhaite réserver 2 places pour Lyon !","customPickup":{"coordinates":{}},"customDropoff":{"coordinates":{}},"emergencyContact":{},"requestedAt":"2025-06-20T17:26:22.458Z","confirmedAt":"2025-06-20T18:52:15.278Z","payment":{"status":"succeeded","amount":51150,"currency":"eur"}}]}   
-
-
-
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X PUT "http://localhost:3000/api/bookings/685599be6f728199bb6ec13b/complete" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU1NzYyMzZmNzI4MTk5YmI2ZWMxMDMiLCJpYXQiOjE3NTA0NTc2OTUsImV4cCI6MTc1MTA2MjQ5NX0.5P3h03K6CCnj58cyK0DLxAISiCD5ZbHZ85nn7KfVQdU" \
-  -H "Content-Type: application/json"
-{"success":true,"message":"Booking marked as completed","booking":{"id":"685599be6f728199bb6ec13b","status":"completed","completedAt":"2025-06-21T03:11:07.146Z","payment":{"status":"succeeded","driverPayout":{"status":"scheduled","amount":41850,"scheduledDate":"2025-06-27T18:52:14.772Z"}}}}    
-
-
-
-❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️
-
-
-
-
-                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "clara@gmail.com",
-    "password": "123azeqsD",
-    "displayName": "Clara M.",
-    "firstName": "Clara",
-    "lastName": "Martin",
-    "gender": "femme",
-    "phone": "+33612345678"
-  }'
-
-{"success":true,"message":"Registration successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5MjcsImV4cCI6MTc1MTA4MjcyN30.DRiXEGxZct7bmNc9M4_FG9r1Up4FImX6OcVphqzarL8","user":{"id":"68562c6715dd419e55f5129c","email":"clara@gmail.com","profile":{"displayName":"Clara M.","firstName":"Clara","lastName":"Martin","avatar":"","gender":"femme"},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false},"stats":{"tripsAsDriver":0,"tripsAsPassenger":0,"tripsCompleted":0,"rating":0,"ratingsCount":0,"totalEarnings":0,"responseTime":0,"cancellationRate":0},"createdAt":"2025-06-21T03:52:07.349Z"}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "elodie@gmail.com",
-    "password": "123azeqsD",
-    "displayName": "Élodie D.",
-    "firstName": "Élodie",
-    "lastName": "Dubois",
-    "gender": "femme",
-    "phone": "+33687654321"
-  }'
-
-{"success":true,"message":"Registration successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM3NjE1ZGQ0MTllNTVmNTEyYTAiLCJpYXQiOjE3NTA0Nzc5NDMsImV4cCI6MTc1MTA4Mjc0M30.KaIOVgVkMLieYoLbSqilGCFNQ3UTPeyXjjGKeftJHBA","user":{"id":"68562c7615dd419e55f512a0","email":"elodie@gmail.com","profile":{"displayName":"Élodie D.","firstName":"Élodie","lastName":"Dubois","avatar":"","gender":"femme"},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false},"stats":{"tripsAsDriver":0,"tripsAsPassenger":0,"tripsCompleted":0,"rating":0,"ratingsCount":0,"totalEarnings":0,"responseTime":0,"cancellationRate":0},"createdAt":"2025-06-21T03:52:22.908Z"}}                                                                                                                                         
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "clara@gmail.com",
-    "password": "123azeqsD"
-  }'
-{"success":true,"message":"Login successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4","user":{"id":"68562c6715dd419e55f5129c","email":"clara@gmail.com","profile":{"displayName":"Clara M.","firstName":"Clara","lastName":"Martin","avatar":"","gender":"femme"},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false},"stats":{"tripsAsDriver":0,"tripsAsPassenger":0,"tripsCompleted":0,"rating":0,"ratingsCount":0,"totalEarnings":0,"responseTime":0,"cancellationRate":0},"createdAt":"2025-06-21T03:52:07.349Z"}}  
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4
-
-
-   ----------------------------------------------------------------------------------------------------------------------------------------------------------------                                                                                                                                                                     
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/kyc/start \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4" \
-  -H "Content-Type: application/json"
-{"success":true,"message":"KYC process started successfully","account":{"id":"acct_1RcIc84C5kIS2U2z","type":"express","country":"FR"},"onboarding":{"url":"https://connect.stripe.com/setup/e/acct_1RcIc84C5kIS2U2z/MKFWFJCjGufS","expires_at":1750478776,"expiresIn":"24 hours"}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET http://localhost:3000/api/kyc/status \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4"  
-{"success":true,"kyc":{"hasConnectAccount":true,"status":"incomplete","canReceivePayments":false,"requiresOnboarding":true,"connectAccountId":"acct_1RcIc84C5kIS2U2z","message":"Vérification en cours ou incomplète"}}                                                                                                                                                                        
-
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET http://localhost:3000/api/kyc/status \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4"  
-{"success":true,"kyc":{"hasConnectAccount":true,"status":"incomplete","canReceivePayments":false,"requiresOnboarding":true,"connectAccountId":"acct_1RcIc84C5kIS2U2z","message":"Vérification en cours ou incomplète"}}  
-
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/kyc/start \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4" \
-  -H "Content-Type: application/json"
-{"success":true,"message":"Onboarding link created for existing account","account":{"id":"acct_1RcIc84C5kIS2U2z"},"onboarding":{"url":"https://connect.stripe.com/setup/e/acct_1RcIc84C5kIS2U2z/agwnQnvYnxQE","expires_at":1750479342}}                                                                                                                                                                        
-
-
-
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-curl -X POST http://localhost:3000/api/trips \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "departure": {
-      "city": "Metz",
-      "address": "Gare de Metz-Ville, Place du Général de Gaulle, 57000 Metz",
-      "coordinates": {
-        "lat": 49.1096,
-        "lng": 6.1758
-      },
-      "postalCode": "57000"
-    },
-    "arrival": {
-      "city": "Marseille",
-      "address": "Gare Saint-Charles, Square Narvik, 13001 Marseille",
-      "coordinates": {
-        "lat": 43.3032,
-        "lng": 5.3808
-      },
-      "postalCode": "13001"
-    },
-    "departureDateTime": "2024-02-15T08:00:00.000Z",
-    "availableSeats": 3,
-    "totalSeats": 4,
-    "pricePerSeat": 45,
-    "distance": 820,
-    "estimatedDuration": 540,
-    "description": "Trajet direct Metz-Marseille, départ matinal pour éviter les bouchons. Pause prévue à Lyon.",
-    "notes": "Merci de confirmer votre présence 30min avant le départ. Bagages légers uniquement.",
-    "vehicle": {
-      "brand": "Renault",
-      "model": "Mégane",
-      "color": "Bleu",
-      "year": 2021,
-      "licensePlate": "AB-123-CD",
-      "fuelType": "Essence"
-    },
-    "preferences": {
-      "allowSmoking": false,
-      "allowPets": false,
-      "allowFood": true,
-      "musicPreference": "medium",
-      "chatLevel": "normal",
-      "maxDetour": 15
-    }
-  }'
-
-"success":false,"message":"Abonnement premium requis","error":"SUBSCRIPTION_REQUIRED","subscription":{"status":"no_subscription","plan":"free","isActive":false},"action":{"type":"subscription_required","title":"Abonnement requis","description":"Cette fonctionnalité nécessite un abonnement premium actif","buttonText":"S'abonner maintenant","redirectTo":"/subscription/plans"}} 
-
-
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------   
-
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ # Créer un abonnement premium temporaire                                                                                                                            
-curl -X POST http://localhost:3000/api/payments/create-subscription \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4" \
-  -H "Content-Type: application/json" \
-  -d '{                                                               
-    "priceId": "price_1RYa3b4GtFeoWSgT7uK1TC0I"
-  }'                                                                          
-
-{"success":true,"message":"Subscription created successfully","subscription":{"id":"sub_1RcIzK4GtFeoWSgTOZn5pyr4","status":"incomplete","current_period_start":1750479910,"current_period_end":1753071910,"plan":{"amount":300,"currency":"eur","interval":"month"}},"clientSecret":"pi_3RcIzL4GtFeoWSgT1TASKTRA_secret_HRMG8YrlBieJeJpfoAvr3rzhk","customer":{"id":"cus_SXNgARPCAwenrO","email":"clara@gmail.com"}}  
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------   
-
-                                                                    
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/payments/complete-subscription-setup \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "subscriptionId": "sub_1RcIzK4GtFeoWSgTOZn5pyr4"
-  }'
-
-{"success":true,"message":"Subscription activated successfully","subscription":{"id":"sub_1RcIzK4GtFeoWSgTOZn5pyr4","status":"active","isActive":true}}
-
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------   
-
-
-curl -X POST http://localhost:3000/api/trips \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "departure": {
-      "city": "Metz",
-      "address": "Gare de Metz-Ville, Place du Général de Gaulle, 57000 Metz",
-      "coordinates": {
-        "lat": 49.1096,
-        "lng": 6.1758
-      },
-      "postalCode": "57000"
-    },
-    "arrival": {
-      "city": "Marseille",
-      "address": "Gare Saint-Charles, Square Narvik, 13001 Marseille",
-      "coordinates": {
-        "lat": 43.3032,
-        "lng": 5.3808
-      },
-      "postalCode": "13001"
-    },
-    "departureDateTime": "2025-12-15T08:00:00.000Z",
-    "availableSeats": 3,
-    "totalSeats": 4,
-    "pricePerSeat": 45,
-    "distance": 820,
-    "estimatedDuration": 540,
-    "description": "Trajet direct Metz-Marseille, départ matinal pour éviter les bouchons. Pause prévue à Lyon pour se dégourdir les jambes et prendre un café.",
-    "notes": "Merci de confirmer votre présence 30min avant le départ. Bagages légers uniquement (1 valise + 1 sac à main). Non-fumeuse uniquement.",
-    "vehicle": {
-      "brand": "Renault",
-      "model": "Mégane",
-      "color": "Bleu",
-      "year": 2021,
-      "licensePlate": "AB-123-CD",
-      "fuelType": "Essence"
-    },
-    "preferences": {
-      "allowSmoking": false,
-      "allowPets": false,
-      "allowFood": true,
-      "musicPreference": "medium",
-      "chatLevel": "normal",
-      "maxDetour": 15
-    }
-  }'
-
-
-{"success":true,"message":"Trajet créé avec succès","trip":{"id":"685640884214b0b2d515cd65","departure":{"city":"Metz","address":"Gare de Metz-Ville, Place du Général de Gaulle, 57000 Metz","coordinates":{"lat":49.1096,"lng":6.1758},"postalCode":"57000"},"arrival":{"city":"Marseille","address":"Gare Saint-Charles, Square Narvik, 13001 Marseille","coordinates":{"lat":43.3032,"lng":5.3808},"postalCode":"13001"},"departureDateTime":"2025-12-15T08:00:00.000Z","estimatedArrivalDateTime":"2025-12-15T17:00:00.000Z","availableSeats":3,"totalSeats":4,"pricePerSeat":45,"distance":820,"estimatedDuration":540,"description":"Trajet direct Metz-Marseille, départ matinal pour éviter les bouchons. Pause prévue à Lyon pour se dégourdir les jambes et prendre un café.","driver":{"id":"68562c6715dd419e55f5129c","displayName":"Clara M.","email":"clara@gmail.com"},"createdAt":"2025-06-21T05:18:00.924Z"}}  
-
-
-
-
----------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/trips/search?departureCity=Metz&arrivalCity=Marseille&passengers=1" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM3NjE1ZGQ0MTllNTVmNTEyYTAiLCJpYXQiOjE3NTA0Nzc5NDMsImV4cCI6MTc1MTA4Mjc0M30.KaIOVgVkMLieYoLbSqilGCFNQ3UTPeyXjjGKeftJHBA"
-
-{"success":true,"message":"1 trajet(s) trouvé(s)","data":[{"id":"685640884214b0b2d515cd65","departure":{"coordinates":{"lat":49.1096,"lng":6.1758},"city":"Metz","address":"Gare de Metz-Ville, Place du Général de Gaulle, 57000 Metz","postalCode":"57000"},"arrival":{"coordinates":{"lat":43.3032,"lng":5.3808},"city":"Marseille","address":"Gare Saint-Charles, Square Narvik, 13001 Marseille","postalCode":"13001"},"departureDateTime":"2025-12-15T08:00:00.000Z","estimatedArrivalDateTime":"2025-12-15T17:00:00.000Z","availableSeats":3,"totalSeats":4,"pricePerSeat":45,"distance":820,"estimatedDuration":540,"description":"Trajet direct Metz-Marseille, départ matinal pour éviter les bouchons. Pause prévue à Lyon pour se dégourdir les jambes et prendre un café.","notes":"Merci de confirmer votre présence 30min avant le départ. Bagages légers uniquement (1 valise + 1 sac à main). Non-fumeuse uniquement.","status":"active","driver":{"id":"68562c6715dd419e55f5129c","displayName":"Clara M.","firstName":"Clara","lastName":"Martin","avatar":"https://api.entrelles.com/avatars/default.jpg","bio":"Conductrice expérimentée, j'aime les trajets dans la bonne humeur !","rating":4.529592211796142,"ratingsCount":27,"memberSince":"2025-06-21T03:52:07.349Z","isVerified":true,"stats":{"tripsAsDriver":85,"tripsCompleted":34,"totalKilometers":25857}},"vehicle":{"id":"vehicle_685640884214b0b2d515cd65","brand":"Renault","model":"Mégane","color":"Bleu","year":2021,"licensePlate":"AB-123-CD","fuelType":"Essence","comfort":"Confort","features":["Climatisation","Bluetooth","GPS"]},"preferences":{"allowSmoking":false,"allowPets":true,"allowFood":true,"musicPreference":"medium","chatLevel":"normal","maxDetour":15,"luggageSpace":"small"},"stats":{"views":173,"bookingRequests":7,"bookingsConfirmed":0,"lastViewedAt":"2025-06-21T05:18:00.924Z"},"createdAt":"2025-06-21T05:18:00.924Z","updatedAt":"2025-06-21T05:18:00.924Z","contact":{"allowDirectMessage":false,"allowPhoneContact":true,"responseTime":"< 4h"},"booking":{"instantBooking":false,"requiresApproval":true,"cancellationPolicy":"strict","advanceBookingHours":2}}],"pagination":{"page":1,"limit":10,"total":1,"pages":1,"hasNext":false,"hasPrev":false},"filters":{"applied":{"departureCity":"Metz","arrivalCity":"Marseille","passengers":1},"available":{"sortOptions":["departureDateTime","pricePerSeat","distance","estimatedDuration"],"priceRange":{"min":5,"max":100},"durationRange":{"min":30,"max":720}}}}                                                                                                                                                                        
-
----------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
-
-──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/bookings \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM3NjE1ZGQ0MTllNTVmNTEyYTAiLCJpYXQiOjE3NTA0Nzc5NDMsImV4cCI6MTc1MTA4Mjc0M30.KaIOVgVkMLieYoLbSqilGCFNQ3UTPeyXjjGKeftJHBA" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tripId": "685640884214b0b2d515cd65",
-    "numberOfSeats": 1,
-    "message": "Bonjour Clara ! Je souhaite réserver une place pour votre trajet Metz-Marseille. Je suis ponctuelle et respectueuse. Merci !",
-    "emergencyContact": {
-      "name": "Sophie Dubois",
-      "phone": "+33612345678",
-      "relationship": "Sœur"
-    }
-  }'
-
-{"success":false,"message":"Abonnement premium requis","error":"SUBSCRIPTION_REQUIRED","subscription":{"status":"no_subscription","plan":"free","isActive":false},"action":{"type":"subscription_required","title":"Abonnement requis","description":"Cette fonctionnalité nécessite un abonnement premium actif","buttonText":"S'abonner maintenant","redirectTo":"/subscription/plans"}}                                                                                                                                                                        
-
-
-
----------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/payments/create-subscription \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM3NjE1ZGQ0MTllNTVmNTEyYTAiLCJpYXQiOjE3NTA0Nzc5NDMsImV4cCI6MTc1MTA4Mjc0M30.KaIOVgVkMLieYoLbSqilGCFNQ3UTPeyXjjGKeftJHBA" \
-  -H "Content-Type: application/json" \
-  -d '{                                                               
-    "priceId": "price_1RYa3b4GtFeoWSgT7uK1TC0I"
-  }'
-{"success":true,"message":"Subscription created successfully","subscription":{"id":"sub_1RcK2X4GtFeoWSgTyrdzjDC9","status":"incomplete","current_period_start":1750483953,"current_period_end":1753075953,"plan":{"amount":300,"currency":"eur","interval":"month"}},"clientSecret":"pi_3RcK2Y4GtFeoWSgT0lYB0lrF_secret_TDJXz1x3EvQLSC94WuJvEc8Ap","customer":{"id":"cus_SXOqj3prF1Yjqq","email":"elodie@gmail.com"}}    
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------   
-
-                                                                    
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/payments/complete-subscription-setup \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM3NjE1ZGQ0MTllNTVmNTEyYTAiLCJpYXQiOjE3NTA0Nzc5NDMsImV4cCI6MTc1MTA4Mjc0M30.KaIOVgVkMLieYoLbSqilGCFNQ3UTPeyXjjGKeftJHBA" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "subscriptionId": "sub_1RcK2X4GtFeoWSgTyrdzjDC9"
-  }'
-
-{"success":true,"message":"Subscription activated successfully","subscription":{"id":"sub_1RcIzK4GtFeoWSgTOZn5pyr4","status":"active","isActive":true}}
-
-
-
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/bookings \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM3NjE1ZGQ0MTllNTVmNTEyYTAiLCJpYXQiOjE3NTA0Nzc5NDMsImV4cCI6MTc1MTA4Mjc0M30.KaIOVgVkMLieYoLbSqilGCFNQ3UTPeyXjjGKeftJHBA" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tripId": "685640884214b0b2d515cd65",
-    "numberOfSeats": 1,
-    "message": "Bonjour Clara ! Je souhaite réserver une place pour votre trajet Metz-Marseille. Je suis ponctuelle et respectueuse. Merci !",
-    "emergencyContact": {
-      "name": "Sophie Dubois",
-      "phone": "+33612345678",
-      "relationship": "Sœur"
-    }
-  }'
-
-{"success":true,"message":"Booking request created successfully","booking":{"id":"685644d24214b0b2d515cd7d","trip":{"id":"685640884214b0b2d515cd65","departure":{"coordinates":{"lat":49.1096,"lng":6.1758},"city":"Metz","address":"Gare de Metz-Ville, Place du Général de Gaulle, 57000 Metz","postalCode":"57000"},"arrival":{"coordinates":{"lat":43.3032,"lng":5.3808},"city":"Marseille","address":"Gare Saint-Charles, Square Narvik, 13001 Marseille","postalCode":"13001"},"distance":820},"passenger":{"id":"68562c7615dd419e55f512a0","displayName":"Élodie D."},"driver":{"id":"68562c6715dd419e55f5129c","displayName":"Clara M.","avatar":"","phone":"+33612345678"},"numberOfSeats":1,"totalPrice":45,"status":"pending","message":"Bonjour Clara ! Je souhaite réserver une place pour votre trajet Metz-Marseille. Je suis ponctuelle et respectueuse. Merci !","payment":{"status":"processing","amount":45101,"currency":"eur","clientSecret":"pi_3RcK6C4GtFeoWSgT1MgVBOBD_secret_FYL0O8IJTL07YlvJX3XIiWSbY","requiresPayment":true},"requestedAt":"2025-06-21T05:36:18.091Z"}}                                                                                                                                                                        
-
-
-
----------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X PUT "http://localhost:3000/api/bookings/685644d24214b0b2d515cd7d/approve" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "Demande approuvée ! Rendez-vous à 14h précises."
-  }'
-{"success":true,"message":"Demande approuvée avec succès","booking":{"id":"685644d24214b0b2d515cd7d","status":"confirmed","confirmedAt":"2025-06-21T08:00:54.259Z","approvalMessage":"Demande approuvée ! Rendez-vous à 14h précises.","trip":{"id":"685640884214b0b2d515cd65","availableSeats":2},"passenger":{"id":"68562c7615dd419e55f512a0","displayName":"Élodie D.","email":"elodie@gmail.com"},"payment":{"status":"processing","amount":45101}}}   
-
-
-
----------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/bookings/driver/requests?status=confirmed" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4" \
-  -H "Content-Type: application/json"
-{"success":true,"message":"1 demande(s) trouvée(s)","count":1,"requests":[{"id":"685644d24214b0b2d515cd7d","trip":{"id":"685640884214b0b2d515cd65","departure":{"coordinates":{"lat":49.1096,"lng":6.1758},"city":"Metz","address":"Gare de Metz-Ville, Place du Général de Gaulle, 57000 Metz","postalCode":"57000"},"arrival":{"coordinates":{"lat":43.3032,"lng":5.3808},"city":"Marseille","address":"Gare Saint-Charles, Square Narvik, 13001 Marseille","postalCode":"13001"},"departureDateTime":"2025-12-15T08:00:00.000Z","pricePerSeat":45,"distance":820,"status":"active"},"passenger":{"id":"68562c7615dd419e55f512a0","displayName":"Élodie D.","avatar":"","phone":"+33687654321","rating":0,"tripsCompleted":0,"isEmailVerified":false},"numberOfSeats":1,"totalPrice":45,"status":"confirmed","message":"Bonjour Clara ! Je souhaite réserver une place pour votre trajet Metz-Marseille. Je suis ponctuelle et respectueuse. Merci !","customPickup":{"coordinates":{}},"customDropoff":{"coordinates":{}},"emergencyContact":{"name":"Sophie Dubois","phone":"+33612345678","relationship":"Sœur"},"requestedAt":"2025-06-21T05:36:18.091Z","confirmedAt":"2025-06-21T08:00:54.259Z","payment":{"status":"processing","amount":45101,"currency":"eur"}}]} 
-
----------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/bookings/driver/requests" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4" \
-  -H "Content-Type: application/json"
-{"success":true,"message":"0 demande(s) trouvée(s)","count":0,"requests":[]}    
-
-
----------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/bookings/history?page=1&limit=10&type=all" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4" \
-  -H "Content-Type: application/json"
-{"success":true,"message":"Historique récupéré (1 réservations)","data":[{"id":"685644d24214b0b2d515cd7d","trip":{"departure":{"coordinates":{"lat":49.1096,"lng":6.1758},"city":"Metz","address":"Gare de Metz-Ville, Place du Général de Gaulle, 57000 Metz","postalCode":"57000"},"arrival":{"coordinates":{"lat":43.3032,"lng":5.3808},"city":"Marseille","address":"Gare Saint-Charles, Square Narvik, 13001 Marseille","postalCode":"13001"},"_id":"685640884214b0b2d515cd65","departureDateTime":"2025-12-15T08:00:00.000Z","pricePerSeat":45,"distance":820,"status":"active"},"passenger":{"profile":{"displayName":"Élodie D.","avatar":""},"stats":{"rating":0},"_id":"68562c7615dd419e55f512a0"},"driver":{"profile":{"displayName":"Clara M.","avatar":""},"stats":{"rating":0},"_id":"68562c6715dd419e55f5129c"},"numberOfSeats":1,"totalPrice":45,"status":"confirmed","message":"Bonjour Clara ! Je souhaite réserver une place pour votre trajet Metz-Marseille. Je suis ponctuelle et respectueuse. Merci !","requestedAt":"2025-06-21T05:36:18.091Z","confirmedAt":"2025-06-21T08:00:54.259Z","review":{},"payment":{"status":"processing","amount":45101,"currency":"eur","refundAmount":0},"userRole":"driver"}],"pagination":{"page":1,"limit":10,"total":1,"pages":1,"hasNext":false,"hasPrev":false},"filters":{"applied":{"type":"all","status":"all"}}}                                                                                                                                                                        
-
-
----------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/bookings/" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4" \
-  -H "Content-Type: application/json"
-{"success":true,"count":1,"bookings":[{"id":"685644d24214b0b2d515cd7d","trip":{"departure":{"coordinates":{"lat":49.1096,"lng":6.1758},"city":"Metz","address":"Gare de Metz-Ville, Place du Général de Gaulle, 57000 Metz","postalCode":"57000"},"arrival":{"coordinates":{"lat":43.3032,"lng":5.3808},"city":"Marseille","address":"Gare Saint-Charles, Square Narvik, 13001 Marseille","postalCode":"13001"},"_id":"685640884214b0b2d515cd65","departureDateTime":"2025-12-15T08:00:00.000Z","pricePerSeat":45},"passenger":{"profile":{"displayName":"Élodie D.","avatar":""},"_id":"68562c7615dd419e55f512a0"},"driver":{"profile":{"displayName":"Clara M.","avatar":""},"_id":"68562c6715dd419e55f5129c"},"numberOfSeats":1,"totalPrice":45,"status":"confirmed","message":"Bonjour Clara ! Je souhaite réserver une place pour votre trajet Metz-Marseille. Je suis ponctuelle et respectueuse. Merci !","requestedAt":"2025-06-21T05:36:18.091Z","confirmedAt":"2025-06-21T08:00:54.259Z","review":{},"payment":{"status":"processing","amount":45101,"currency":"eur","commission":{"appFee":8200,"driverAmount":36900,"processingFee":1333,"totalAmount":45101},"driverPayout":{"status":[]}}}]}                                                                                                                                                                        
-
-  
-  ---------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/bookings/stats" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4" \
-  -H "Content-Type: application/json"
-{"success":true,"stats":{"asPassenger":{},"asDriver":{"confirmed":{"count":1,"totalAmount":45,"totalPaid":0,"totalEarnings":0}},"payments":{"pendingPayouts":{"count":0,"totalAmount":0,"bookings":[]},"recentRefunds":[]}}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET "http://localhost:3000/api/bookings/stats" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM3NjE1ZGQ0MTllNTVmNTEyYTAiLCJpYXQiOjE3NTA0Nzc5NDMsImV4cCI6MTc1MTA4Mjc0M30.KaIOVgVkMLieYoLbSqilGCFNQ3UTPeyXjjGKeftJHBA" \
-  -H "Content-Type: application/json"
-{"success":true,"stats":{"asPassenger":{"confirmed":{"count":1,"totalAmount":45,"totalPaid":0,"totalEarnings":0}},"asDriver":{},"payments":{"pendingPayouts":{"count":0,"totalAmount":0,"bookings":[]},"recentRefunds":[]}}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ 
-
-
----------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
-
-curl -X PUT "http://localhost:3000/api/bookings/BOOKING_ID/reject" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "reason": "Désolée, je ne peux plus assurer ce trajet."
-  }'
-
-
-
-
-
----------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
-
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ # Vérifier le profil public avec les nouvelles données
-curl -X GET "http://localhost:3000/api/users/685576236f728199bb6ec103"
-
-{"success":true,"message":"Profil public récupéré","user":{"id":"685576236f728199bb6ec103","profile":{"displayName":"Marie Dubois ✨","firstName":"Marie","avatar":"https://res.cloudinary.com/duiyjjm34/image/upload/v1750459259/entrelles/avatars/avatar_685576236f728199bb6ec103_1750459256854.jpg","bio":"Conductrice passionnée avec avatar Cloudinary !","city":"Paris","country":"France"},"stats":{"rating":0,"ratingsCount":0,"tripsAsDriver":1,"tripsAsPassenger":0,"tripsCompleted":1,"memberSince":"2025-06-20T14:54:27.450Z"},"preferences":{"allowSmoking":false,"allowPets":true,"allowFood":true,"musicPreference":"high","chatLevel":"high","maxDetour":10,"autoAcceptBookings":false},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false},"lastActive":"2025-06-21T03:01:28.283Z","responseTime":0}}  
-
-
-
----------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
-
-
-curl -X POST "http://localhost:3000/api/users/upload-avatar" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM2NzE1ZGQ0MTllNTVmNTEyOWMiLCJpYXQiOjE3NTA0Nzc5OTcsImV4cCI6MTc1MTA4Mjc5N30.dGjU36rqO8fVEdwQR1hpypnV8r_7PGYNq5VkPgBIcu4" \
-  -F "avatar=@/mnt/01DB93AE0391F010/SARY/fond/clara.jpg"
-  
-  
-  ---------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-
-  👉️  👉️  👉️  👉️  👉️  👉️
-curl -X POST http://localhost:3000/api/payments/finalize-trip-payment \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU2MmM3NjE1ZGQ0MTllNTVmNTEyYTAiLCJpYXQiOjE3NTA0Nzc5NDMsImV4cCI6MTc1MTA4Mjc0M30.KaIOVgVkMLieYoLbSqilGCFNQ3UTPeyXjjGKeftJHBA" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "bookingId": "685644d24214b0b2d515cd7d",
-    "paymentMethodId": "pm_card_visa"
-  }'
+{"success":true,"data":{"kyc":{"hasConnectAccount":true,"connectAccountId":"acct_1RcdkG4CQCv9UG1T","status":"verified","canReceivePayments":true,"requiresOnboarding":false,"message":"Compte vérifié, vous pouvez recevoir des paiements","nextAction":"none","createdAt":"2025-06-22T02:35:04.193Z","verifiedAt":"2025-06-22T02:37:41.562Z","lastChecked":"2025-06-22T02:38:37.988Z","stripe":{"chargesEnabled":false,"payoutsEnabled":false,"detailsSubmitted":false}},"balance":{"available":[{"amount":0,"currency":"eur","source_types":{"card":0}}],"pending":[{"amount":20700,"currency":"eur","source_types":{"card":20700}}],"totalAvailable":0,"totalPending":207},"payouts":[],"summary":{"hasStripeAccount":true,"isVerified":true,"canReceivePayments":true,"canReceivePayouts":false,"availableBalance":0,"pendingBalance":207}}}

@@ -1,0 +1,56 @@
+# Ordre de lecture logique des fichiers Entrelles Backend
+
+## 1. Configuration et Setup
+package.json
+index.js
+vercel.json
+
+## 2. Configuration Base de Données et Services
+config/database.js
+config/collections.js
+config/passport.js
+
+## 3. Modèles de Données
+models/User.js
+models/Trip.js
+models/Booking.js
+
+## 4. Middleware
+middleware/authMiddleware.js
+middleware/subscriptionMiddleware.js
+middleware/tripValidation.js
+
+## 5. Contrôleurs (Logique Métier)
+controllers/authController.js
+controllers/userController.js
+controllers/tripController.js
+controllers/bookingController.js
+controllers/paymentController.js
+controllers/kycController.js
+
+## 6. Routes (API Endpoints)
+routes/auth.js
+routes/users.js
+routes/trips.js
+routes/tripRoutes.js
+routes/bookings.js
+routes/payments.js
+routes/kyc.js
+routes/googleAuth.js
+routes/webhooks.js
+
+## 7. Utilitaires
+utils/validators.js
+utils/payoutScheduler.js
+
+## 8. API et Tests
+api/index.js
+test-user-flow.js
+serie-de-test.txt
+
+## 9. Documentation
+doc.txt
+kyc.txt
+approche-stripe.txt
+stripe-infos.txt
+tree.txt
