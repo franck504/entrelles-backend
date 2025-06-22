@@ -33,29 +33,20 @@ const createAndActivateSubscription = async (req, res) => {
     }
 
     // Créer payment method
-    const paymentMethod = await stripe.paymentMethods.create({
-      type: 'card',
-      card: {
-        number: '4242424242424242',  // Carte test Stripe
-        exp_month: 12,
-        exp_year: 2025,
-        cvc: '123'
-      }
-    });
+    const paymentMethodId = 'pm_card_visa'; // Payment Method test officiel
 
-    await stripe.paymentMethods.attach(paymentMethod.id, { customer: customerId });
+    await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
     await stripe.customers.update(customerId, {
-      invoice_settings: { default_payment_method: paymentMethod.id }
+      invoice_settings: { default_payment_method: paymentMethodId }
     });
 
     // Créer abonnement
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
-      default_payment_method: paymentMethod.id,
+      default_payment_method: paymentMethodId, // ✅ Utiliser le PM test
       metadata: { userId: userId.toString(), plan: 'premium' }
     });
-
     // Sauvegarder
     await User.findByIdAndUpdate(userId, {
       'subscription.stripeSubscriptionId': subscription.id,
