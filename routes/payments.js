@@ -1,30 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+const paymentController = require('../controllers/paymentController');
+const { protect } = require('../middleware/authMiddleware'); // ✅ UTILISER protect
 
-const {
-  createAndActivateSubscription,
-  getSubscriptionStatus,
-  createTripPayment,
-  finalizeTripPayment,
-  getDriverFinancialStatus  // ✅ AJOUTEZ CETTE LIGNE
-} = require('../controllers/paymentController');
-
-// ✅ ROUTES ESSENTIELLES
-router.use(protect);
-
-// Abonnements
-router.post('/subscribe', createAndActivateSubscription);
-router.get('/subscription-status', getSubscriptionStatus);
-
-// Paiements trajets
-router.post('/create-trip-payment', createTripPayment);
-router.post('/finalize-trip-payment', finalizeTripPayment);
-
-// ✅ AJOUTEZ CETTE ROUTE AVANT module.exports
-router.get('/driver/financial-status', getDriverFinancialStatus);
+// Routes avec protect au lieu de auth
+router.post('/subscribe', protect, paymentController.createAndActivateSubscription);
+router.get('/subscription-status', protect, paymentController.getSubscriptionStatus);
+router.post('/create-trip-payment', protect, paymentController.createTripPayment);
+router.post('/finalize-trip-payment', protect, paymentController.finalizeTripPayment);
+router.get('/driver/financial-status', protect, paymentController.getDriverFinancialStatus);
 
 // ✅ NOUVELLE ROUTE
-router.post('/confirm-subscription', auth, paymentController.confirmSubscription);
+router.post('/confirm-subscription', protect, paymentController.confirmSubscription);
 
 module.exports = router;
