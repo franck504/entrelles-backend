@@ -8,9 +8,9 @@ const createAndActivateSubscription = async (req, res) => {
   try {
     const { priceId } = req.body;
     const userId = req.user.id;
-
+    
     console.log('🚀 Creating subscription for user:', userId);
-
+    
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -20,34 +20,76 @@ const createAndActivateSubscription = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Already subscribed' });
     }
 
-    // Créer customer
+    // ✅ SOLUTION PERMANENTE - Auto-recovery customer
     let customerId = user.stripe?.customerId;
+    
+    // Vérifier si le customer existe dans Stripe
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId);
+        console.log('✅ Customer existant trouvé:', customerId);
+      } catch (error) {
+        if (error.code === 'resource_missing') {
+          console.log('❌ Customer inexistant dans Stripe, recréation automatique...');
+          customerId = null; // Forcer la recréation
+          
+          // Nettoyer l'ancien customerId en base
+          await User.findByIdAndUpdate(userId, { 
+            $unset: { 'stripe.customerId': 1 } 
+          });
+        } else {
+          throw error; // Autre erreur Stripe
+        }
+      }
+    }
+
+    // Créer nouveau customer si nécessaire
     if (!customerId) {
+      console.log('🆕 Création nouveau customer Stripe...');
       const customer = await stripe.customers.create({
         email: user.email,
         name: user.profile.displayName,
-        metadata: { userId: userId.toString() }
+        metadata: { 
+          userId: userId.toString(),
+          createdAt: new Date().toISOString()
+        }
       });
+      
       customerId = customer.id;
-      await User.findByIdAndUpdate(userId, { 'stripe.customerId': customerId });
+      
+      // Sauvegarder le nouveau customerId
+      await User.findByIdAndUpdate(userId, { 
+        'stripe.customerId': customerId 
+      });
+      
+      console.log('✅ Nouveau customer créé:', customerId);
     }
 
-    // Créer payment method et changer cle stripe
-    const paymentMethodId = 'pm_card_visa'; // Payment Method test officiel
-
-    await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
+    // Créer payment method
+    const paymentMethodId = 'pm_card_visa';
+    
+    await stripe.paymentMethods.attach(paymentMethodId, { 
+      customer: customerId 
+    });
+    
     await stripe.customers.update(customerId, {
-      invoice_settings: { default_payment_method: paymentMethodId }
+      invoice_settings: { 
+        default_payment_method: paymentMethodId 
+      }
     });
 
     // Créer abonnement
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
-      default_payment_method: paymentMethodId, // ✅ Utiliser le PM test
-      metadata: { userId: userId.toString(), plan: 'premium' }
+      default_payment_method: paymentMethodId,
+      metadata: { 
+        userId: userId.toString(), 
+        plan: 'premium' 
+      }
     });
-    // Sauvegarder
+
+    // Sauvegarder abonnement
     await User.findByIdAndUpdate(userId, {
       'subscription.stripeSubscriptionId': subscription.id,
       'subscription.status': subscription.status,
@@ -69,10 +111,10 @@ const createAndActivateSubscription = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Subscription error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Error creating subscription',
-      error: error.message 
+      error: error.message
     });
   }
 };
