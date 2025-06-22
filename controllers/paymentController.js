@@ -66,15 +66,23 @@ const createAndActivateSubscription = async (req, res) => {
     }
 
     // Créer payment method
-    const paymentMethodId = 'pm_card_visa';
-    
-    await stripe.paymentMethods.attach(paymentMethodId, { 
+    const paymentMethod = await stripe.paymentMethods.create({
+      type: 'card',
+      card: {
+        number: '4242424242424242',
+        exp_month: 12,
+        exp_year: 2025,
+        cvc: '123'
+      }
+    });
+
+    await stripe.paymentMethods.attach(paymentMethod.id, { 
       customer: customerId 
     });
-    
+
     await stripe.customers.update(customerId, {
       invoice_settings: { 
-        default_payment_method: paymentMethodId 
+        default_payment_method: paymentMethod.id 
       }
     });
 
@@ -82,11 +90,8 @@ const createAndActivateSubscription = async (req, res) => {
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
-      default_payment_method: paymentMethodId,
-      metadata: { 
-        userId: userId.toString(), 
-        plan: 'premium' 
-      }
+      default_payment_method: paymentMethod.id, // ✅ Même PM partout
+      metadata: { userId: userId.toString(), plan: 'premium' }
     });
 
     // Sauvegarder abonnement
