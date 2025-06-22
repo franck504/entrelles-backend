@@ -25,7 +25,7 @@ app.use(helmet());
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || ['http://localhost:3001', 'https://f043-129-222-109-170.ngrok-free.app'],
+  origin: process.env.FRONTEND_URL || 'http://localhost:3001',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
