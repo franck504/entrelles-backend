@@ -3,37 +3,31 @@ const router = express.Router();
 
 const {
   createBooking,
+  getAllBookings,
   getBookingById,
   confirmBooking,
   cancelBooking,
   completeBooking,
   addReview,
-  getMyBookings,
-  getUpcomingBookings,
-  getPendingRequests,
-  getBookingStats
+  getMyBookings
 } = require('../controllers/bookingController');
 
 const { protect } = require('../middleware/authMiddleware');
+const { requireActiveSubscription } = require('../middleware/subscriptionMiddleware');
 
-// Routes publiques (si nécessaire)
-// Aucune pour l'instant
-
-// Routes protégées
+// Toutes les routes nécessitent une authentification
 router.use(protect);
 
 // Routes principales
-router.post('/', createBooking);
-router.get('/pending-requests', getPendingRequests);
-router.get('/upcoming', getUpcomingBookings);
-router.get('/stats', getBookingStats);
-router.get('/', getMyBookings);
-
-// Routes avec ID - ✅ IMPORTANT: Utiliser :id pas :bookingId
+router.post('/', requireActiveSubscription, createBooking);
+router.get('/', getAllBookings);
+router.get('/my-bookings', getMyBookings);
 router.get('/:id', getBookingById);
+
+// Actions sur les réservations
 router.put('/:id/confirm', confirmBooking);
 router.put('/:id/cancel', cancelBooking);
 router.put('/:id/complete', completeBooking);
-router.put('/:id/review', addReview);
+router.post('/:id/review', addReview);
 
 module.exports = router;

@@ -2,27 +2,18 @@ const Booking = require('../models/Booking');
 const Trip = require('../models/Trip');
 const User = require('../models/User');
 
-// ✅ MÉTHODE MODIFIÉE - Créer une nouvelle réservation (avec paiement)
 // @desc    Créer une nouvelle réservation
 // @route   POST /api/bookings
 // @access  Private
 const createBooking = async (req, res) => {
   try {
-    const {
-      tripId,
-      numberOfSeats = 1,
-      message,
-      customPickup,
-      customDropoff,
-      emergencyContact,
-      requiresPayment = true // ✅ NOUVEAU : Option paiement immédiat
-    } = req.body;
+    const { tripId, numberOfSeats, message, customPickup, customDropoff } = req.body;
+    const passengerId = req.user.id;
 
-    console.log('🔍 Creating booking for trip:', tripId, 'seats:', numberOfSeats);
+    console.log('🎫 Creating booking for trip:', tripId);
 
-    // Vérifier que le trajet existe
+    // Récupérer le trajet avec la conductrice
     const trip = await Trip.findById(tripId).populate('driver');
-    
     if (!trip) {
       return res.status(404).json({
         success: false,
@@ -30,15 +21,37 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Vérifier la disponibilité
-    if (!trip.canBeBookedBy(req.user.id)) {
+    // ✅ VÉRIFIER KYC DE LA CONDUCTRICE
+    const driverKycStatus = trip.driver.getKycStatus();
+    
+    if (!driverKycStatus.canReceivePayments) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cette conductrice ne peut pas encore recevoir de réservations',
+        error: 'DRIVER_KYC_NOT_VERIFIED',
+        kyc: {
+          status: driverKycStatus.status,
+          message: 'La conductrice doit compléter sa vérification d\'identité'
+        },
+        action: {
+          type: 'info',
+          title: 'Conductrice non vérifiée',
+          description: 'Cette conductrice n\'a pas encore complété sa vérification d\'identité',
+          buttonText: 'Choisir un autre trajet'
+        }
+      });
+    }
+
+    // Vérifier que le trajet peut être réservé
+    if (!trip.canBeBookedBy(passengerId)) {
       return res.status(400).json({
         success: false,
         message: 'This trip cannot be booked'
       });
     }
 
-    if (trip.availableSeats < numberOfSeats) {
+    // Vérifier le nombre de places disponibles
+    if (numberOfSeats > trip.availableSeats) {
       return res.status(400).json({
         success: false,
         message: `Only ${trip.availableSeats} seats available`
@@ -51,54 +64,24 @@ const createBooking = async (req, res) => {
     // Créer la réservation
     const booking = await Booking.create({
       trip: tripId,
-      passenger: req.user.id,
+      passenger: passengerId,
       driver: trip.driver._id,
       numberOfSeats,
       totalPrice,
       message,
       customPickup,
       customDropoff,
-      emergencyContact,
-      // ✅ NOUVEAU : Initialiser le paiement
-      payment: {
-        amount: totalPrice * 100, // En centimes
-        status: 'pending',
-        currency: 'eur'
-      },
-      metadata: {
-        userAgent: req.get('User-Agent'),
-        ipAddress: req.ip,
-        source: 'web'
-      }
+      status: 'pending'
     });
 
-    // Incrémenter le compteur de demandes de réservation
-    trip.stats.bookingRequests += 1;
-    await trip.save();
-
-    // Populer les données
+    // Populer les données pour la réponse
     await booking.populate([
       { path: 'trip', select: 'departure arrival departureDateTime pricePerSeat distance' },
-      { path: 'passenger', select: 'profile.displayName profile.avatar profile.phone' },
-      { path: 'driver', select: 'profile.displayName profile.avatar profile.phone' }
+      { path: 'passenger', select: 'profile.displayName profile.avatar email' },
+      { path: 'driver', select: 'profile.displayName profile.avatar email' }
     ]);
 
     console.log('✅ Booking created successfully:', booking._id);
-
-    // ✅ NOUVEAU : Créer PaymentIntent si paiement requis
-    let paymentIntent = null;
-    if (requiresPayment && typeof booking.createPaymentIntent === 'function') {
-      try {
-        console.log('💳 Creating payment intent...');
-        paymentIntent = await booking.createPaymentIntent(trip.distance);
-        console.log('✅ Payment intent created:', paymentIntent.id);
-      } catch (paymentError) {
-        console.error('❌ Payment intent creation failed:', paymentError);
-        // Ne pas faire échouer la réservation si le paiement échoue
-      }
-    } else {
-      console.log('⚠️ Payment not required or method not available');
-    }
 
     res.status(201).json({
       success: true,
@@ -107,36 +90,23 @@ const createBooking = async (req, res) => {
         id: booking._id,
         trip: {
           id: booking.trip._id,
-          departure: booking.trip.departure,
-          arrival: booking.trip.arrival,
+          route: `${booking.trip.departure.city} → ${booking.trip.arrival.city}`,
           departureDateTime: booking.trip.departureDateTime,
-          pricePerSeat: booking.trip.pricePerSeat,
           distance: booking.trip.distance
         },
         passenger: {
           id: booking.passenger._id,
-          displayName: booking.passenger.profile.displayName,
-          avatar: booking.passenger.profile.avatar,
-          phone: booking.passenger.profile.phone
+          name: booking.passenger.profile.displayName,
+          email: booking.passenger.email
         },
         driver: {
           id: booking.driver._id,
-          displayName: booking.driver.profile.displayName,
-          avatar: booking.driver.profile.avatar,
-          phone: booking.driver.profile.phone
+          name: booking.driver.profile.displayName,
+          email: booking.driver.email
         },
         numberOfSeats: booking.numberOfSeats,
         totalPrice: booking.totalPrice,
         status: booking.status,
-        message: booking.message,
-        // ✅ NOUVEAU : Informations paiement
-        payment: {
-          status: booking.payment.status,
-          amount: booking.payment.amount,
-          currency: booking.payment.currency,
-          clientSecret: paymentIntent?.client_secret || null,
-          requiresPayment: requiresPayment
-        },
         requestedAt: booking.requestedAt
       }
     });
@@ -148,115 +118,51 @@ const createBooking = async (req, res) => {
       const messages = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
         success: false,
-        message: 'Validation error',
+        message: 'Validation errors',
         errors: messages
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'Server error during booking creation',
+      message: 'Error creating booking',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };
 
-// ✅ MÉTHODE MODIFIÉE - Obtenir toutes les réservations (avec infos paiement)
-// @desc    Obtenir toutes les réservations de l'utilisateur
+// @desc    Obtenir toutes les réservations
 // @route   GET /api/bookings
 // @access  Private
-const getMyBookings = async (req, res) => {
+const getAllBookings = async (req, res) => {
   try {
-    const { status, type = 'all', includePayment = 'true' } = req.query;
-
-    let bookings;
-
-    if (type === 'passenger') {
-      // Réservations en tant que passagère
-      let query = { passenger: req.user.id };
-      if (status) query.status = status;
-      
-      bookings = await Booking.find(query)
-        .populate('trip', 'departure arrival departureDateTime pricePerSeat status distance')
-        .populate('driver', 'profile.displayName profile.avatar profile.phone stats.rating')
-        .sort({ requestedAt: -1 });
-        
-    } else if (type === 'driver') {
-      // Réservations pour mes trajets (en tant que conductrice)
-      let query = { driver: req.user.id };
-      if (status) query.status = status;
-      
-      bookings = await Booking.find(query)
-        .populate('trip', 'departure arrival departureDateTime pricePerSeat status distance')
-        .populate('passenger', 'profile.displayName profile.avatar profile.phone stats.rating')
-        .sort({ requestedAt: -1 });
-        
-    } else {
-      // Toutes les réservations
-      bookings = await Booking.getBookingsByUser(req.user.id, status);
-    }
-
-    // ✅ NOUVEAU : Enrichir avec infos paiement si demandé
-    const enrichedBookings = bookings.map(booking => {
-      const bookingData = {
-        id: booking._id,
-        trip: booking.trip,
-        passenger: booking.passenger,
-        driver: booking.driver,
-        numberOfSeats: booking.numberOfSeats,
-        totalPrice: booking.totalPrice,
-        status: booking.status,
-        message: booking.message,
-        requestedAt: booking.requestedAt,
-        confirmedAt: booking.confirmedAt,
-        cancelledAt: booking.cancelledAt,
-        completedAt: booking.completedAt,
-        review: booking.review
-      };
-
-      // Ajouter infos paiement si demandé
-      if (includePayment === 'true') {
-        bookingData.payment = {
-          status: booking.payment?.status || 'pending',
-          amount: booking.payment?.amount || 0,
-          currency: booking.payment?.currency || 'eur',
-          paidAt: booking.payment?.paidAt,
-          refundedAt: booking.payment?.refundedAt,
-          commission: booking.payment?.commission,
-          driverPayout: booking.payment?.driverPayout
-        };
-      }
-
-      return bookingData;
-    });
+    const userId = req.user.id;
+    const bookings = await Booking.getBookingsByUser(userId);
 
     res.status(200).json({
       success: true,
-      count: enrichedBookings.length,
-      bookings: enrichedBookings
+      count: bookings.length,
+      bookings
     });
 
   } catch (error) {
-    console.error('❌ Get my bookings error:', error);
+    console.error('❌ Get all bookings error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while fetching bookings'
+      message: 'Error fetching bookings'
     });
   }
 };
 
-// ✅ MÉTHODE MODIFIÉE - Obtenir une réservation par ID (avec infos paiement)
 // @desc    Obtenir une réservation par ID
 // @route   GET /api/bookings/:id
 // @access  Private
 const getBookingById = async (req, res) => {
   try {
-    const bookingId = req.params.id;
-
-    const booking = await Booking.findById(bookingId)
+    const booking = await Booking.findById(req.params.id)
       .populate('trip')
-      .populate('passenger', 'profile.displayName profile.avatar profile.phone profile.bio stats.rating')
-      .populate('driver', 'profile.displayName profile.avatar profile.phone profile.bio stats.rating');
+      .populate('passenger', 'profile.displayName profile.avatar email')
+      .populate('driver', 'profile.displayName profile.avatar email');
 
     if (!booking) {
       return res.status(404).json({
@@ -266,7 +172,7 @@ const getBookingById = async (req, res) => {
     }
 
     // Vérifier que l'utilisateur est impliqué dans cette réservation
-  if (booking.passenger._id.toString() !== req.user.id.toString() &&
+   if (booking.passenger._id.toString() !== req.user.id.toString() &&
     booking.driver._id.toString() !== req.user.id.toString()) {
       return res.status(403).json({
         success: false,
@@ -274,178 +180,89 @@ const getBookingById = async (req, res) => {
       });
     }
 
-    // ✅ NOUVEAU : Inclure infos paiement complètes
-    const bookingData = {
-      id: booking._id,
-      trip: booking.trip,
-      passenger: booking.passenger,
-      driver: booking.driver,
-      numberOfSeats: booking.numberOfSeats,
-      totalPrice: booking.totalPrice,
-      status: booking.status,
-      message: booking.message,
-      customPickup: booking.customPickup,
-      customDropoff: booking.customDropoff,
-      emergencyContact: booking.emergencyContact,
-      requestedAt: booking.requestedAt,
-      confirmedAt: booking.confirmedAt,
-      cancelledAt: booking.cancelledAt,
-      completedAt: booking.completedAt,
-      cancellationReason: booking.cancellationReason,
-      review: booking.review,
-      // ✅ NOUVEAU : Infos paiement détaillées
-      payment: {
-        status: booking.payment?.status || 'pending',
-        amount: booking.payment?.amount || 0,
-        currency: booking.payment?.currency || 'eur',
-        paidAt: booking.payment?.paidAt,
-        failureReason: booking.payment?.failureReason,
-        refundId: booking.payment?.refundId,
-        refundedAt: booking.payment?.refundedAt,
-        refundAmount: booking.payment?.refundAmount,
-        commission: booking.payment?.commission,
-        driverPayout: booking.payment?.driverPayout,
-        stripePaymentIntentId: booking.payment?.stripePaymentIntentId
-      },
-      createdAt: booking.createdAt,
-      updatedAt: booking.updatedAt
-    };
-
     res.status(200).json({
       success: true,
-      booking: bookingData
+      booking
     });
 
   } catch (error) {
-    console.error('❌ Get booking by ID error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching booking'
-    });
-  }
-};
-
-// ✅ MÉTHODE MODIFIÉE - Confirmer une réservation (avec gestion paiement)
-// @desc    Confirmer une réservation (conductrice)
-// @route   PUT /api/bookings/:id/confirm
-// @access  Private
-const confirmBooking = async (req, res) => {
-  try {
-    const bookingId = req.params.id;
-    const { requiresPayment = true } = req.body; // ✅ NOUVEAU : Option paiement
-
-    console.log('🔍 Confirming booking:', bookingId, 'requiresPayment:', requiresPayment);
-
-    // Trouver la réservation avec le trajet populé
-    const booking = await Booking.findById(bookingId)
-      .populate('trip')
-      .populate('passenger', 'profile.displayName profile.avatar email')
-      .populate('driver', 'profile.displayName profile.avatar');
+    console.error('❌ Get booking error:', error);
     
-    if (!booking) {
-      console.log('❌ Booking not found with ID:', bookingId);
+    if (error.name === 'CastError') {
       return res.status(404).json({
         success: false,
         message: 'Booking not found'
       });
     }
 
-    // Vérifier que l'utilisateur est le conducteur
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching booking'
+    });
+  }
+};
+
+// @desc    Confirmer une réservation (conductrice)
+// @route   PUT /api/bookings/:id/confirm
+// @access  Private
+const confirmBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('trip')
+      .populate('passenger', 'profile.displayName email')
+      .populate('driver', 'profile.displayName email');
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    // Vérifier que l'utilisateur est la conductrice
     if (booking.driver._id.toString() !== req.user.id.toString()) {
       return res.status(403).json({
         success: false,
-        message: 'Only the driver can confirm this booking'
+        message: 'Only the driver can confirm bookings'
       });
     }
 
-    // Vérifier que la réservation est en attente
+    // Vérifier le statut
     if (booking.status !== 'pending') {
       return res.status(400).json({
         success: false,
-        message: `Booking is not in pending status. Current status: ${booking.status}`
+        message: `Cannot confirm booking with status: ${booking.status}`
       });
     }
 
-    console.log('✅ Booking validation passed');
-
-    // ✅ NOUVEAU : Gestion du paiement
-    let paymentIntent = null;
-    
-    if (requiresPayment) {
-      // Vérifier si PaymentIntent existe déjà
-      if (!booking.payment.stripePaymentIntentId) {
-        console.log('💳 Creating payment intent for confirmed booking...');
-        try {
-          paymentIntent = await booking.createPaymentIntent(booking.trip.distance);
-          console.log('✅ Payment intent created:', paymentIntent.id);
-        } catch (paymentError) {
-          console.error('❌ Payment intent creation failed:', paymentError);
-          return res.status(500).json({
-            success: false,
-            message: 'Failed to create payment intent',
-            error: paymentError.message
-          });
-        }
-      } else {
-        console.log('💳 Payment intent already exists:', booking.payment.stripePaymentIntentId);
-      }
-
-      // Mettre à jour le statut en "confirmed" mais paiement requis
-      booking.status = 'confirmed';
-      booking.confirmedAt = new Date();
-      booking.payment.status = 'processing'; // En attente de paiement
-      
-    } else {
-      // Confirmation sans paiement (cas particulier)
-      booking.status = 'confirmed';
-      booking.confirmedAt = new Date();
-      booking.payment.status = 'succeeded'; // Considéré comme payé
-      booking.payment.paidAt = new Date();
-    }
-
+    // Confirmer la réservation
+    booking.status = 'confirmed';
+    booking.confirmedAt = new Date();
     await booking.save();
-    console.log('✅ Booking confirmed successfully');
 
-    // Réduire les places disponibles du trajet
+    // Mettre à jour les places disponibles
     const trip = await Trip.findById(booking.trip._id);
     if (trip) {
       trip.availableSeats = Math.max(0, trip.availableSeats - booking.numberOfSeats);
       await trip.save();
-      console.log('✅ Trip seats updated:', trip.availableSeats, 'remaining');
     }
+
+    console.log('✅ Booking confirmed:', booking._id);
 
     res.status(200).json({
       success: true,
-      message: requiresPayment ? 
-        'Booking confirmed - Payment required to complete reservation' : 
-        'Booking confirmed successfully',
+      message: 'Booking confirmed successfully',
       booking: {
         id: booking._id,
         status: booking.status,
         confirmedAt: booking.confirmedAt,
         trip: {
-          id: booking.trip._id,
-          departure: booking.trip.departure,
-          arrival: booking.trip.arrival,
-          departureDateTime: booking.trip.departureDateTime,
-          availableSeats: trip?.availableSeats || booking.trip.availableSeats
+          route: `${booking.trip.departure.city} → ${booking.trip.arrival.city}`,
+          date: booking.trip.departureDateTime
         },
         passenger: {
-          id: booking.passenger._id,
-          displayName: booking.passenger.profile.displayName,
-          avatar: booking.passenger.profile.avatar,
+          name: booking.passenger.profile.displayName,
           email: booking.passenger.email
-        },
-        numberOfSeats: booking.numberOfSeats,
-        totalPrice: booking.totalPrice,
-        // ✅ NOUVEAU : Infos paiement
-        payment: {
-          status: booking.payment.status,
-          amount: booking.payment.amount,
-          currency: booking.payment.currency,
-          clientSecret: paymentIntent?.client_secret || booking.payment.stripeClientSecret,
-          requiresPayment: requiresPayment,
-          paidAt: booking.payment.paidAt
         }
       }
     });
@@ -454,27 +271,21 @@ const confirmBooking = async (req, res) => {
     console.error('❌ Confirm booking error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error during booking confirmation',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      message: 'Error confirming booking'
     });
   }
 };
 
-// ✅ MÉTHODE MODIFIÉE - Annuler une réservation (avec remboursement automatique)
 // @desc    Annuler une réservation
 // @route   PUT /api/bookings/:id/cancel
 // @access  Private
 const cancelBooking = async (req, res) => {
   try {
     const { reason } = req.body;
-    const bookingId = req.params.id;
-    
-    console.log('🔍 Cancelling booking:', bookingId, 'reason:', reason);
-    
-    const booking = await Booking.findById(bookingId)
+    const booking = await Booking.findById(req.params.id)
       .populate('trip')
-      .populate('passenger', 'profile.displayName')
-      .populate('driver', 'profile.displayName');
+      .populate('passenger', 'profile.displayName email')
+      .populate('driver', 'profile.displayName email');
 
     if (!booking) {
       return res.status(404).json({
@@ -483,67 +294,55 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    // Vérifier que l'utilisateur peut annuler cette réservation
-if (booking.passenger._id.toString() !== req.user.id.toString() &&
-    booking.driver._id.toString() !== req.user.id.toString()) {
+    // Vérifier que l'utilisateur peut annuler
+    if (booking.passenger._id.toString() !== req.user.id.toString() && 
+        booking.driver._id.toString() !== req.user.id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to cancel this booking'
       });
     }
 
-    // ✅ NOUVEAU : La méthode cancel() gère automatiquement le remboursement
+    // Annuler la réservation
     await booking.cancel(req.user.id, reason);
 
-    // Remettre les places disponibles si la réservation était confirmée
+    // Remettre les places disponibles si c'était confirmé
     if (booking.status === 'confirmed') {
       const trip = await Trip.findById(booking.trip._id);
       if (trip) {
         trip.availableSeats += booking.numberOfSeats;
         await trip.save();
-        console.log('✅ Trip seats restored:', trip.availableSeats, 'available');
       }
     }
 
-    console.log('✅ Booking cancelled successfully');
+    console.log('✅ Booking cancelled:', booking._id);
 
     res.status(200).json({
       success: true,
       message: 'Booking cancelled successfully',
       booking: {
         id: booking._id,
-        status: booking.status,
+        status: 'cancelled',
         cancelledAt: booking.cancelledAt,
-        cancellationReason: booking.cancellationReason,
-        cancelledBy: booking.cancelledBy,
-        // ✅ NOUVEAU : Infos remboursement
-        payment: {
-          status: booking.payment.status,
-          refundId: booking.payment.refundId,
-          refundedAt: booking.payment.refundedAt,
-          refundAmount: booking.payment.refundAmount
-        }
+        cancellationReason: booking.cancellationReason
       }
     });
 
   } catch (error) {
     console.error('❌ Cancel booking error:', error);
-    res.status(400).json({
+    res.status(500).json({
       success: false,
-      message: error.message || 'Server error during booking cancellation'
+      message: 'Error cancelling booking'
     });
   }
 };
 
-// ✅ MÉTHODE CONSERVÉE - Marquer une réservation comme terminée
 // @desc    Marquer une réservation comme terminée
 // @route   PUT /api/bookings/:id/complete
 // @access  Private
 const completeBooking = async (req, res) => {
   try {
-    const bookingId = req.params.id;
-    
-    const booking = await Booking.findById(bookingId)
+    const booking = await Booking.findById(req.params.id)
       .populate('trip')
       .populate('passenger', 'profile.displayName')
       .populate('driver', 'profile.displayName');
@@ -555,8 +354,8 @@ const completeBooking = async (req, res) => {
       });
     }
 
-    // Vérifier que l'utilisateur peut marquer cette réservation comme terminée
-if (booking.passenger._id.toString() !== req.user.id.toString() &&
+    // Vérifier que l'utilisateur est impliqué
+  if (booking.passenger._id.toString() !== req.user.id.toString() &&
     booking.driver._id.toString() !== req.user.id.toString()) {
       return res.status(403).json({
         success: false,
@@ -567,67 +366,35 @@ if (booking.passenger._id.toString() !== req.user.id.toString() &&
     // Marquer comme terminé
     await booking.complete();
 
-    // Mettre à jour les statistiques des utilisateurs
-    const User = require('../models/User');
-    await User.findByIdAndUpdate(booking.driver, {
-      $inc: { 'stats.tripsCompleted': 1, 'stats.tripsAsDriver': 1 }
-    });
-    await User.findByIdAndUpdate(booking.passenger, {
-      $inc: { 'stats.tripsAsPassenger': 1, 'stats.tripsCompleted': 1 }
-    });
-
-    console.log('✅ Booking completed and stats updated');
+    console.log('✅ Booking completed:', booking._id);
 
     res.status(200).json({
       success: true,
-      message: 'Booking marked as completed',
+      message: 'Booking completed successfully',
       booking: {
         id: booking._id,
         status: booking.status,
-        completedAt: booking.completedAt,
-        // ✅ NOUVEAU : Infos paiement final
-        payment: {
-          status: booking.payment.status,
-          driverPayout: booking.payment.driverPayout
-        }
+        completedAt: booking.completedAt
       }
     });
 
   } catch (error) {
     console.error('❌ Complete booking error:', error);
-    res.status(400).json({
+    res.status(500).json({
       success: false,
-      message: error.message || 'Server error during booking completion'
+      message: 'Error completing booking'
     });
   }
 };
 
-// ✅ MÉTHODE CONSERVÉE - Ajouter une évaluation
-// @desc    Ajouter une évaluation à une réservation
-// @route   PUT /api/bookings/:id/review
+// @desc    Ajouter une évaluation
+// @route   POST /api/bookings/:id/review
 // @access  Private
 const addReview = async (req, res) => {
   try {
-    console.log('🔍 Starting addReview controller...');
-    
     const { rating, comment } = req.body;
-    const bookingId = req.params.id;
-
-    // Validation du rating
-    if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({
-        success: false,
-        message: 'Rating must be between 1 and 5'
-      });
-    }
-
-    console.log(`🔍 Adding review for booking ${bookingId} with rating ${rating}`);
-
-    // Trouver la réservation
-    const booking = await Booking.findById(bookingId)
-      .populate('trip')
-      .populate('passenger', 'profile.displayName')
-      .populate('driver', 'profile.displayName');
+    const booking = await Booking.findById(req.params.id)
+      .populate('driver', 'profile.displayName stats.rating stats.ratingsCount');
 
     if (!booking) {
       return res.status(404).json({
@@ -636,274 +403,84 @@ const addReview = async (req, res) => {
       });
     }
 
-    // Vérifier que l'utilisateur peut évaluer cette réservation
-   if (booking.passenger._id.toString() !== req.user.id.toString()) {
+    // Vérifier que l'utilisateur est la passagère
+    if (booking.passenger.toString() !== req.user.id.toString()) {
       return res.status(403).json({
         success: false,
-        message: 'Only the passenger can review this booking'
+        message: 'Only passengers can leave reviews'
       });
     }
 
-    console.log('✅ Booking found, calling addReview method...');
-
-    // Appeler la méthode du modèle
+    // Ajouter l'évaluation
     await booking.addReview(rating, comment);
 
-    console.log('✅ Review added successfully');
-
-    // Recharger la réservation avec toutes les données
-    const updatedBooking = await Booking.findById(bookingId)
-      .populate('trip')
-      .populate('passenger', 'profile.displayName profile.avatar')
-      .populate('driver', 'profile.displayName profile.avatar stats.rating stats.ratingsCount');
+    console.log('✅ Review added for booking:', booking._id);
 
     res.status(200).json({
       success: true,
       message: 'Review added successfully',
-      booking: {
-        id: updatedBooking._id,
-        review: updatedBooking.review,
-        driver: {
-          id: updatedBooking.driver._id,
-          displayName: updatedBooking.driver.profile.displayName,
-          avatar: updatedBooking.driver.profile.avatar,
-          rating: updatedBooking.driver.stats.rating,
-          ratingsCount: updatedBooking.driver.stats.ratingsCount
-        }
+      review: {
+        rating: booking.review.rating,
+        comment: booking.review.comment,
+        reviewedAt: booking.review.reviewedAt
       }
     });
 
   } catch (error) {
-    console.error('❌ Add review controller error:', error);
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Server error while adding review'
-    });
-  }
-};
-
-// ✅ MÉTHODE CONSERVÉE - Obtenir les réservations à venir
-// @desc    Obtenir les réservations à venir
-// @route   GET /api/bookings/upcoming
-// @access  Private
-const getUpcomingBookings = async (req, res) => {
-  try {
-    const bookings = await Booking.getUpcomingBookings(req.user.id);
-
-    // Filtrer les bookings avec des trips valides
-    const validBookings = bookings.filter(booking => booking.trip);
-
-    // ✅ NOUVEAU : Enrichir avec infos paiement
-    const enrichedBookings = validBookings.map(booking => ({
-      id: booking._id,
-      trip: booking.trip,
-      passenger: booking.passenger,
-      driver: booking.driver,
-      numberOfSeats: booking.numberOfSeats,
-      totalPrice: booking.totalPrice,
-      status: booking.status,
-      requestedAt: booking.requestedAt,
-      confirmedAt: booking.confirmedAt,
-      // ✅ NOUVEAU : Statut paiement
-      payment: {
-        status: booking.payment?.status || 'pending',
-        amount: booking.payment?.amount || 0,
-        paidAt: booking.payment?.paidAt
-      }
-    }));
-
-    res.status(200).json({
-      success: true,
-      count: enrichedBookings.length,
-      bookings: enrichedBookings
-    });
-
-  } catch (error) {
-    console.error('❌ Get upcoming bookings error:', error);
+    console.error('❌ Add review error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while fetching upcoming bookings'
+      message: error.message || 'Error adding review'
     });
   }
 };
 
-// ✅ MÉTHODE CONSERVÉE - Obtenir les demandes en attente
-// @desc    Obtenir les demandes de réservation en attente (pour conductrice)
-// @route   GET /api/bookings/pending-requests
+// @desc    Obtenir mes réservations
+// @route   GET /api/bookings/my-bookings
 // @access  Private
-const getPendingRequests = async (req, res) => {
-  try {
-    const bookings = await Booking.find({
-      status: 'pending'
-    })
-    .populate('trip', 'departure arrival departureDateTime pricePerSeat distance')
-    .populate('passenger', 'profile.displayName profile.avatar profile.bio stats.rating')
-    .populate('driver', 'profile.displayName profile.avatar')
-    .sort({ requestedAt: -1 });
-
-    // ✅ NOUVEAU : Enrichir avec infos paiement
-    const enrichedBookings = bookings.map(booking => ({
-      id: booking._id,
-      trip: booking.trip,
-      passenger: booking.passenger,
-      driver: booking.driver,
-      numberOfSeats: booking.numberOfSeats,
-      totalPrice: booking.totalPrice,
-      status: booking.status,
-      message: booking.message,
-      requestedAt: booking.requestedAt,
-      // ✅ NOUVEAU : Statut paiement
-      payment: {
-        status: booking.payment?.status || 'pending',
-        amount: booking.payment?.amount || 0
-      }
-    }));
-
-    res.status(200).json({
-      success: true,
-      count: enrichedBookings.length,
-      bookings: enrichedBookings
-    });
-
-  } catch (error) {
-    console.error('❌ Get pending requests error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching pending requests'
-    });
-  }
-};
-
-// ✅ MÉTHODE MODIFIÉE - Statistiques avec paiements
-// @desc    Obtenir les statistiques de réservation
-// @route   GET /api/bookings/stats
-// @access  Private
-const getBookingStats = async (req, res) => {
+const getMyBookings = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { status, type } = req.query;
 
-    // Statistiques en tant que passagère
-    const passengerStats = await Booking.aggregate([
-      { $match: { passenger: userId } },
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-          totalAmount: { $sum: '$totalPrice' },
-          // ✅ NOUVEAU : Stats paiement
-          totalPaid: { 
-            $sum: { 
-              $cond: [
-                { $eq: ['$payment.status', 'succeeded'] }, 
-                '$payment.amount', 
-                0
-              ] 
-            } 
-          }
-        }
-      }
-    ]);
-
-    // Statistiques en tant que conductrice
-    const driverStats = await Booking.aggregate([
-      { $match: { driver: userId } },
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-          totalAmount: { $sum: '$totalPrice' },
-          // ✅ NOUVEAU : Gains conductrice
-          totalEarnings: { 
-            $sum: { 
-              $cond: [
-                { $eq: ['$payment.status', 'succeeded'] }, 
-                '$payment.commission.driverAmount',
-                0
-              ] 
-            } 
-          }
-        }
-      }
-    ]);
-
-    // ✅ NOUVEAU : Virements en attente
-    const pendingPayouts = await Booking.find({
-      driver: userId,
-      'payment.driverPayout.status': { $in: ['pending', 'scheduled'] }
-    }).select('payment.driverPayout trip numberOfSeats');
-
-    // ✅ NOUVEAU : Remboursements récents
-    const recentRefunds = await Booking.find({
-      $or: [{ passenger: userId }, { driver: userId }],
-      'payment.refundedAt': { $exists: true }
-    })
-    .sort({ 'payment.refundedAt': -1 })
-    .limit(5)
-    .select('payment trip numberOfSeats totalPrice');
-
-    // Formater les statistiques
-    const formatStats = (stats) => {
-      const result = {};
-      stats.forEach(stat => {
-        result[stat._id] = {
-          count: stat.count,
-          totalAmount: stat.totalAmount,
-          totalPaid: stat.totalPaid || 0,
-          totalEarnings: stat.totalEarnings || 0
-        };
-      });
-      return result;
-    };
+    let bookings;
+    
+    if (type === 'passenger') {
+      bookings = await Booking.find({ passenger: userId })
+        .populate('trip', 'departure arrival departureDateTime distance')
+        .populate('driver', 'profile.displayName profile.avatar stats.rating')
+        .sort({ requestedAt: -1 });
+    } else if (type === 'driver') {
+      bookings = await Booking.find({ driver: userId })
+        .populate('trip', 'departure arrival departureDateTime distance')
+        .populate('passenger', 'profile.displayName profile.avatar')
+        .sort({ requestedAt: -1 });
+    } else {
+      bookings = await Booking.getBookingsByUser(userId);
+    }
 
     res.status(200).json({
       success: true,
-      stats: {
-        asPassenger: formatStats(passengerStats),
-        asDriver: formatStats(driverStats),
-        // ✅ NOUVEAU : Infos paiements
-        payments: {
-          pendingPayouts: {
-            count: pendingPayouts.length,
-            totalAmount: pendingPayouts.reduce((sum, booking) => 
-              sum + (booking.payment.driverPayout.amount || 0), 0
-            ),
-            bookings: pendingPayouts.map(booking => ({
-              bookingId: booking._id,
-              amount: booking.payment.driverPayout.amount,
-              status: booking.payment.driverPayout.status,
-              scheduledDate: booking.payment.driverPayout.scheduledDate,
-              seats: booking.numberOfSeats
-            }))
-          },
-          recentRefunds: recentRefunds.map(booking => ({
-            bookingId: booking._id,
-            refundAmount: booking.payment.refundAmount,
-            refundedAt: booking.payment.refundedAt,
-            originalAmount: booking.totalPrice,
-            seats: booking.numberOfSeats
-          }))
-        }
-      }
+      count: bookings.length,
+      bookings
     });
 
   } catch (error) {
-    console.error('❌ Get booking stats error:', error);
+    console.error('❌ Get my bookings error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while fetching booking statistics'
+      message: 'Error fetching bookings'
     });
   }
 };
 
 module.exports = {
   createBooking,
-  getMyBookings,
+  getAllBookings,
   getBookingById,
   confirmBooking,
   cancelBooking,
   completeBooking,
   addReview,
-  getUpcomingBookings,
-  getPendingRequests,
-  getBookingStats
+  getMyBookings
 };

@@ -3,6 +3,7 @@ const router = express.Router();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Booking = require('../models/Booking');
 const User = require('../models/User');
+const { handleConnectAccountUpdate } = require('../controllers/kycController');
 
 // ✅ WEBHOOK STRIPE - Traitement COMPLET des événements
 const handleStripeWebhook = async (req, res) => {
@@ -31,10 +32,10 @@ const handleStripeWebhook = async (req, res) => {
                 await handlePaymentSucceeded(event.data.object);
                 break;
             // À ajouter dans votre webhook handler
-            case 'invoice.payment_succeeded':
-                // Activer l'abonnement
-                await activateSubscription(event.data.object);
-                break;
+            // case 'invoice.payment_succeeded':
+            //     // Activer l'abonnement
+            //     await activateSubscription(event.data.object);
+            //     break;
 
             case 'invoice.payment_failed':
                 // Désactiver l'abonnement
@@ -136,6 +137,18 @@ const handleStripeWebhook = async (req, res) => {
 
             case 'transfer.updated':
                 await handleTransferUpdated(event.data.object);
+                break;
+
+            case 'account.updated':
+                await handleConnectAccountUpdate(event.data.object);
+                break;
+
+            case 'account.application.authorized':
+                await handleConnectAccountUpdate(event.data.object);
+                break;
+
+            case 'account.application.deauthorized':
+                await handleConnectAccountDeauthorized(event.data.object);
                 break;
 
             default:

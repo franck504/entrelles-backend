@@ -114,15 +114,17 @@ const bookingSchema = new mongoose.Schema({
       totalAmount: { type: Number, default: 0 }
     },
     driverPayout: {
-      status: {
-        type: String,
-        enum: ['pending', 'scheduled', 'paid', 'failed'],
-        default: 'pending'
-      },
-      amount: { type: Number, default: 0 },
+      status: ['pending', 'scheduled', 'paid', 'failed'],
+      amount: Number,
       scheduledDate: Date,
       paidAt: Date,
-      failureReason: String
+      failureReason: String,
+      // ✅ NOUVEAUX CHAMPS STRIPE CONNECT:
+      stripeConnectAccountId: String,  // Compte destination
+      stripePayoutId: String,          // ID du virement
+      stripeTransferId: String,        // ID du transfert
+      payoutDate: Date,                // Date réelle du virement
+      transferDate: Date               // Date réelle du transfert
     },
     refundId: String,
     refundAmount: { type: Number, default: 0 },
@@ -506,5 +508,62 @@ bookingSchema.pre('save', function(next) {
 bookingSchema.post('save', function(doc) {
   console.log(`📧 Notification: Booking ${doc._id} status changed to ${doc.status}`);
 });
+
+// ✅ NOUVELLE MÉTHODE:
+bookingSchema.methods.executeScheduledPayout = async function() {
+  const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+  
+  try {
+    // 1. Récupérer le compte Connect du driver
+    const Trip = require('./Trip');
+    const User = require('./User');
+    
+    const trip = await Trip.findById(this.trip).populate('driver');
+    const driver = trip.driver;
+    
+    if (!driver.kyc?.stripeConnectAccountId) {
+      throw new Error('Driver has no Connect account');
+    }
+    
+    if (!driver.kyc?.canReceivePayments) {
+      throw new Error('Driver cannot receive payments');
+    }
+    
+    // 2. Créer le transfert vers le compte Connect
+    const transfer = await stripe.transfers.create({
+      amount: this.payment.driverPayout.amount,
+      currency: 'eur',
+      destination: driver.kyc.stripeConnectAccountId,
+      description: `Paiement trajet ${trip.departure.city} → ${trip.arrival.city}`,
+      metadata: {
+        bookingId: this._id.toString(),
+        tripId: this.trip.toString(),
+        driverId: driver._id.toString(),
+        type: 'driver_payout'
+      }
+    });
+    
+    // 3. Mettre à jour le booking
+    this.payment.driverPayout.stripeConnectAccountId = driver.kyc.stripeConnectAccountId;
+    this.payment.driverPayout.stripeTransferId = transfer.id;
+    this.payment.driverPayout.status = 'paid';
+    this.payment.driverPayout.paidAt = new Date();
+    this.payment.driverPayout.transferDate = new Date();
+    
+    await this.save();
+    
+    console.log('✅ Driver payout executed:', transfer.id);
+    return transfer;
+    
+  } catch (error) {
+    // Marquer comme échoué
+    this.payment.driverPayout.status = 'failed';
+    this.payment.driverPayout.failureReason = error.message;
+    await this.save();
+    
+    console.error('❌ Driver payout failed:', error);
+    throw error;
+  }
+};
 
 module.exports = mongoose.model('Booking', bookingSchema);

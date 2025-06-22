@@ -1,40 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { protect } = require('../middleware/authMiddleware');
-const Booking = require('../models/Booking');
-const User = require('../models/User');
 
-
-// ✅ IMPORT DU CONTROLLER
 const {
-  getPaymentStats,      //🆗
-  createSubscription,   //🆗
-  cancelSubscription,   //🆗
-  getSubscriptionStatus,//🆗
-  createTripPayment,    //🆗
-  confirmTripPayment,   //🆗
-  finalizeTripPayment ,  //🆗
-  completeSubscriptionSetup
+  createAndActivateSubscription,
+  getSubscriptionStatus,
+  createTripPayment,
+  finalizeTripPayment,
+  getDriverFinancialStatus  // ✅ AJOUTEZ CETTE LIGNE
 } = require('../controllers/paymentController');
 
-// ✅ ROUTES PROTÉGÉES
+// ✅ ROUTES ESSENTIELLES
 router.use(protect);
 
-
-// Routes du controller
-router.get('/stats', getPaymentStats);
-router.post('/create-subscription', createSubscription);
-router.post('/cancel-subscription', cancelSubscription);
-// Ajouter après les routes existantes
-// router.post('/confirm-subscription-payment', confirmSubscriptionPayment);
-
+// Abonnements
+router.post('/subscribe', createAndActivateSubscription);
 router.get('/subscription-status', getSubscriptionStatus);
+
+// Paiements trajets
 router.post('/create-trip-payment', createTripPayment);
-router.post('/confirm-trip-payment', confirmTripPayment);
-router.post('/finalize-trip-payment', finalizeTripPayment); // ✅ UNE SEULE DÉFINITION
+router.post('/finalize-trip-payment', finalizeTripPayment);
 
-router.post('/complete-subscription-setup', completeSubscriptionSetup);
-
+// ✅ AJOUTEZ CETTE ROUTE AVANT module.exports
+router.get('/driver/financial-status', getDriverFinancialStatus);
 
 module.exports = router;

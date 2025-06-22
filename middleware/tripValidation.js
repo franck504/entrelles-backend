@@ -124,4 +124,65 @@ const enrichTripData = (req, res, next) => {
   }
 };
 
-module.exports = { enrichTripData };
+// ✅ AMÉLIORER la fonction requireKycVerification
+const requireKycVerification = async (req, res, next) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+    
+    const kycStatus = user.getKycStatus();
+    
+    // ✅ VÉRIFICATION STRICTE avec logs détaillés
+    console.log('🔍 KYC Check for user:', user.email);
+    console.log('🔍 KYC Status:', kycStatus);
+    
+    if (!kycStatus.canReceivePayments) {
+      console.log('❌ KYC verification failed:', kycStatus.status);
+      
+      return res.status(403).json({
+        success: false,
+        message: 'Vérification KYC requise pour créer des trajets payants',
+        error: 'KYC_VERIFICATION_REQUIRED',
+        kyc: {
+          status: kycStatus.status,
+          message: kycStatus.message,
+          nextAction: kycStatus.nextAction,
+          requiresOnboarding: kycStatus.requiresOnboarding,
+          connectAccountId: kycStatus.connectAccountId,
+          hasConnectAccount: kycStatus.hasConnectAccount
+        },
+        action: {
+          type: 'popup',
+          title: 'Vérification requise',
+          description: 'Vous devez vérifier votre identité pour créer des trajets payants',
+          buttonText: 'Commencer la vérification',
+          redirectTo: '/kyc/start'
+        }
+      });
+    }
+    
+    console.log('✅ KYC vérifié pour utilisateur:', user.email);
+    next();
+    
+  } catch (error) {
+    console.error('❌ Erreur vérification KYC:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la vérification KYC',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
+// ✅ MODIFIER L'EXPORT
+module.exports = { 
+  enrichTripData,
+  requireKycVerification // ✅ AJOUTER CETTE LIGNE
+};

@@ -9,15 +9,23 @@ const connectDB = require('./config/database');
 
 const app = express();
 
+// ✅ AJOUTER après connectDB():
+const { startPayoutScheduler } = require('./utils/payoutScheduler');
+
 // Connexion à la base de données
 connectDB();
+
+// ✅ DÉMARRER LE SCHEDULER
+if (process.env.NODE_ENV !== 'test') {
+  startPayoutScheduler();
+}
 
 // Middleware de sécurité
 app.use(helmet());
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || ['http://localhost:3001', 'https://entrelles.vercel.app'],
+  origin: process.env.FRONTEND_URL || ['http://localhost:3001', 'https://f043-129-222-109-170.ngrok-free.app'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -68,12 +76,16 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Vérifiez que cette ligne existe avec vos autres routes
+app.use('/api/kyc', require('./routes/kyc'));
+
+// Ajoutez avec vos autres routes (après les routes existantes)
+app.use('/api/users', require('./routes/users'));
+
 // Routes API existantes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/trips', require('./routes/trips'));
 app.use('/api/bookings', require('./routes/bookings'));
-
-// ✅ VÉRIFIEZ QUE CETTE LIGNE EXISTE
 app.use('/api/payments', require('./routes/payments'));
 
 // Test database route

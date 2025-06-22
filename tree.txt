@@ -1,11 +1,11 @@
-                                                                                
 ┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ tree -I 'node_modules'
+└─$ tree -I 'node_modules'                               
 .
 ├── 01-avant-fixing-price.zip
 ├── api
 │   ├── index.js
 │   └── Untitled-1.ini
+├── approche-stripe.txt
 ├── config
 │   ├── collections.js
 │   ├── database.js
@@ -13,9 +13,13 @@
 ├── controllers
 │   ├── authController.js
 │   ├── bookingController.js
+│   ├── kycController.js
 │   ├── paymentController.js
 │   └── tripController.js
 ├── index.js
+├── kyc.txt
+├── lib
+│   └── main.dart
 ├── middleware
 │   ├── authMiddleware.js
 │   └── tripValidation.js
@@ -29,6 +33,7 @@
 │   ├── auth.js
 │   ├── bookings.js
 │   ├── googleAuth.js
+│   ├── kyc.js
 │   ├── payments.js
 │   ├── tripRoutes.js
 │   ├── trips.js
@@ -37,16 +42,17 @@
 ├── src-auth-OK.zip
 ├── stripe-infos.txt
 ├── stripe.key
-├── test-complete-user-flow-clean.jps
+├── test-complete-user-flow-clean.js
 ├── test-complete-user-flow-detailed.js
 ├── test-complete-user-flow-fixed.js
+├── test-fixed.sh
+├── test.sh
 ├── tree.txt
 ├── utils
 │   └── validators.js
 └── vercel.json
 
-9 directories, 34 files
-
+10 directories, 41 files
 
 
 ✅ payment_intent.succeeded
@@ -84,87 +90,45 @@
 
 
 
-# Commençons par les bases
-cat package.json          # Dépendances et scripts
-cat vercel.json           # Configuration déploiement
-cat index.js              # Point d'entrée principal
-cat config/database.js    # Connexion MongoDB
+PUT /api/users/profile          // Mettre à jour profil complet
+GET /api/users/:id              // Voir profil public d'une utilisatrice
+POST /api/users/upload-avatar   // Upload photo de profil
+
+POST /api/reviews               // Laisser un avis après trajet
+GET /api/reviews/user/:id       // Voir avis d'une utilisatrice
+PUT /api/reviews/:id            // Modifier son avis
+DELETE /api/reviews/:id         // Supprimer son avis
+GET /api/reviews/trip/:id       // Avis d'un trajet spécifique
+
+GET /api/trips/driver/stats         // Statistiques conductrice
+ 
+
+ 👉️existantes
+GET /api/bookings/driver/requests   // Demandes reçues (conductrice)
+PUT /api/bookings/:id/approve       // Approuver une demande
+PUT /api/bookings/:id/reject        // Rejeter une demande
+GET /api/bookings/history           // Historique complet
 
 
-# L'ordre des modèles est important (dépendances)
-cat models/User.js        # Utilisatrices (base)
-cat models/Trip.js        # Trajets (référence User)
-cat models/Booking.js     # Réservations (référence User + Trip)
+GET /api/payments/history           // Historique paiements
+GET /api/payments/receipts/:id      // Télécharger reçu
+GET /api/payments/driver/earnings   // Gains détaillés conductrice
 
-
-cat middleware/authMiddleware.js    # Authentification JWT
-cat middleware/tripValidation.js    # Enrichissement données trajets
-cat utils/validators.js             # Validations express-validator
-
-
-cat controllers/authController.js     # Inscription/Connexion
-cat controllers/tripController.js     # Gestion trajets
-cat controllers/bookingController.js  # Gestion réservations
-cat controllers/paymentController.js  # Gestion paiements Stripe
-
-
-
-cat routes/auth.js        # Routes authentification
-cat routes/trips.js       # Routes trajets
-cat routes/bookings.js    # Routes réservations
-cat routes/payments.js    # Routes paiements
-cat routes/webhooks.js    # Webhooks Stripe
+POST /api/verification/email   // Renvoyer email vérification
+GET /api/verification/status   // Statut vérifications
 
 
 
-cat test-complete-user-flow-detailed.js  # Test flow complet (VOTRE VERSION)
-cat test-complete-user-flow-clean.js     # Version nettoyée
-cat test-complete-user-flow-fixed.js     # Version corrigée
 
-
-# Inscription d'une nouvelle utilisatrice
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "josie@gmail.com",
-    "password": "Password123",
-    "displayName": "Marie Test",
-    "firstName": "Marie",
-    "lastName": "Test",
-    "gender": "femme",
-    "phone": "+33612345678"
-  }'
+routes/webhooks.js - Webhooks Stripe existants
+controllers/paymentController.js - Logique paiements
+models/Booking.js - Structure paiements/virements
+2. PRIORITÉ MOYENNE 📊
+controllers/kycController.js - Stripe Connect (comptes conductrices)
+models/User.js - Données Stripe Connect utilisateurs
+3. FICHIERS DE CONFIG ⚙️
+stripe-infos.txt - Configuration Stripe
+approche-stripe.txt - Documentation approche
 
 
 
-price_1RYa3b4GtFeoWSgT7uK1TC0I
-
-
-# Créer l'abonnement premium
-curl -X POST http://localhost:3000/api/payments/create-subscription \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODUzMjBkNDA3ZjAyODRmMDJmMDc5MTIiLCJpYXQiOjE3NTAyNzgzNTYsImV4cCI6MTc1MDg4MzE1Nn0.82RNRj7s7lvKR8eSWbGeD7uVnGSR-EYMLumrppKUYyE" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "priceId": "price_1RYa3b4GtFeoWSgT7uK1TC0I"
-  }'
-
-
-
-✅ package.json - Dépendances et scripts
-✅ index.js - Serveur principal avec routes
-✅ api/index.js - Handler Vercel
-✅ vercel.json - Configuration déploiement
-✅ config/database.js - Connexion MongoDB
-✅ config/passport.js - Auth Google (désactivée)
-Modèles de données
-✅ models/User.js - Utilisatrices avec Stripe
-✅ models/Trip.js - Trajets de covoiturage
-✅ models/Booking.js - Réservations avec paiements
-Controllers & Middleware
-✅ controllers/authController.js - Authentification JWT
-✅ controllers/bookingController.js - Gestion réservations
-✅ controllers/paymentController.js - Paiements Stripe
-✅ middleware/authMiddleware.js - Protection routes
-
-// Ajouter après les routes existantes
-router.post('/confirm-subscription-payment', confirmSubscriptionPayment);

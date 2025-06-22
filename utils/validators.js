@@ -139,69 +139,50 @@ const validateUpdateProfile = [
   handleValidationErrors
 ];
 
-// Validation pour la création de trajet
+// ✅ VALIDATION ALLÉGÉE POUR TRAJETS (compatible avec enrichissement)
 const validateCreateTrip = [
+  // ✅ OBLIGATOIRES SEULEMENT
   body('departure.city')
     .notEmpty()
     .withMessage('Departure city is required'),
-    
-  body('departure.address')
-    .notEmpty()
-    .withMessage('Departure address is required'),
-    
-  body('departure.coordinates.lat')
-    .notEmpty()
-    .withMessage('Departure latitude is required'),
-    
-  body('departure.coordinates.lng')
-    .notEmpty()
-    .withMessage('Departure longitude is required'),
-    
+  
   body('arrival.city')
     .notEmpty()
     .withMessage('Arrival city is required'),
-    
-  body('arrival.address')
-    .notEmpty()
-    .withMessage('Arrival address is required'),
-    
-  body('arrival.coordinates.lat')
-    .notEmpty()
-    .withMessage('Arrival latitude is required'),
-    
-  body('arrival.coordinates.lng')
-    .notEmpty()
-    .withMessage('Arrival longitude is required'),
-    
+  
   body('departureDateTime')
     .notEmpty()
-    .withMessage('Departure date and time is required'),
-    
-  body('estimatedArrivalDateTime')
-    .notEmpty()
-    .withMessage('Estimated arrival date and time is required'),
-    
-  body('estimatedDuration')
-    .notEmpty()
-    .withMessage('Estimated duration is required'),
-    
+    .isISO8601()
+    .withMessage('Valid departure date and time is required'),
+  
   body('availableSeats')
-    .notEmpty()
-    .withMessage('Available seats is required'),
-    
+    .isInt({ min: 1, max: 8 })
+    .withMessage('Available seats must be between 1 and 8'),
+  
+  // ✅ OPTIONNELS (seront enrichis automatiquement)
+  body('departure.address')
+    .optional()
+    .trim(),
+  
+  body('arrival.address')
+    .optional()
+    .trim(),
+  
   body('pricePerSeat')
-    .notEmpty()
-    .withMessage('Price per seat is required'),
-    
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Price per seat must be a positive number'),
+  
   body('distance')
-    .notEmpty()
-    .withMessage('Distance is required'),
-    
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Distance must be a positive number'),
+  
   body('description')
     .optional()
     .isLength({ max: 500 })
     .withMessage('Description cannot exceed 500 characters'),
-    
+  
   handleValidationErrors
 ];
 

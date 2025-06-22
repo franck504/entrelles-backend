@@ -1,0 +1,705 @@
+# 📋 **DOCUMENTATION COMPLÈTE - FLOW UTILISATEUR ENTRELLES**
+
+## 🎯 **FLOW COMPLET TESTÉ ET VALIDÉ**
+
+---
+
+## 1️⃣ **INSCRIPTION UTILISATEUR**
+
+### **ENDPOINT :** `POST /api/auth/register`
+### **HEADERS :**
+```json
+{
+  "Content-Type": "application/json"
+}
+```
+
+### **BODY :**
+```json
+{
+  "email": "laddy@gmail.com",
+  "password": "123azeqsD",
+  "displayName": "Laddy Conductrice",
+  "firstName": "Laddy",
+  "lastName": "Driver",
+  "gender": "femme",
+  "phone": "+33123456789"
+}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "message": "Registration successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "6857185c86fae60ecee79362",
+    "email": "laddy@gmail.com",
+    "profile": {
+      "displayName": "Laddy Conductrice",
+      "firstName": "Laddy",
+      "lastName": "Driver",
+      "avatar": "",
+      "gender": "femme"
+    },
+    "verification": {
+      "isEmailVerified": false,
+      "isPhoneVerified": false,
+      "isIdentityVerified": false
+    },
+    "stats": {
+      "tripsAsDriver": 0,
+      "tripsAsPassenger": 0,
+      "tripsCompleted": 0,
+      "rating": 0,
+      "ratingsCount": 0,
+      "totalEarnings": 0,
+      "responseTime": 0,
+      "cancellationRate": 0
+    },
+    "createdAt": "2025-06-21T20:38:52.447Z"
+  }
+}
+```
+
+---
+
+## 2️⃣ **CONNEXION UTILISATEUR**
+
+### **ENDPOINT :** `POST /api/auth/login`
+### **HEADERS :**
+```json
+{
+  "Content-Type": "application/json"
+}
+```
+
+### **BODY :**
+```json
+{
+  "email": "laddy@gmail.com",
+  "password": "123azeqsD"
+}
+```
+
+### **RÉPONSE :** *(Identique à l'inscription)*
+
+---
+
+## 3️⃣ **ABONNEMENT PREMIUM (OBLIGATOIRE)**
+
+### **ENDPOINT :** `POST /api/payments/subscribe`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_USER",
+  "Content-Type": "application/json"
+}
+```
+
+### **BODY :**
+```json
+{
+  "priceId": "price_1RYa3b4GtFeoWSgT7uK1TC0I"
+}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "message": "🎉 Bienvenue dans Entrelles Premium !",
+  "subscription": {
+    "id": "sub_1RcYFM4GtFeoWSgTAGenvIMn",
+    "status": "active",
+    "isActive": true
+  }
+}
+```
+
+---
+
+## 4️⃣ **KYC - DÉMARRER VÉRIFICATION (CONDUCTRICE UNIQUEMENT)**
+
+### **ENDPOINT :** `POST /api/kyc/start`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_CONDUCTRICE",
+  "Content-Type": "application/json"
+}
+```
+
+### **BODY :** *(Vide)*
+```json
+{}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "message": "KYC process started successfully",
+  "account": {
+    "id": "acct_1RcYIIQQBZ8fBavl",
+    "type": "express",
+    "country": "FR"
+  },
+  "onboarding": {
+    "url": "https://connect.stripe.com/setup/e/acct_1RcYIIQQBZ8fBavl/SgMhh2AMUaZ2",
+    "expires_at": 1750539052,
+    "expiresIn": "24 hours"
+  }
+}
+```
+
+---
+
+## 5️⃣ **KYC - VÉRIFIER STATUT**
+
+### **ENDPOINT :** `GET /api/kyc/status`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_CONDUCTRICE"
+}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "kyc": {
+    "hasConnectAccount": true,
+    "status": "verified",
+    "canReceivePayments": true,
+    "requiresOnboarding": false,
+    "connectAccountId": "acct_1RcYIIQQBZ8fBavl",
+    "message": "Compte vérifié et opérationnel"
+  }
+}
+```
+
+---
+
+## 6️⃣ **KYC - RAFRAÎCHIR STATUT (SIMULATION)**
+
+### **ENDPOINT :** `POST /api/kyc/refresh`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_CONDUCTRICE",
+  "Content-Type": "application/json"
+}
+```
+
+### **BODY :** *(Vide)*
+```json
+{}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "message": "KYC status refreshed successfully",
+  "kyc": {
+    "status": "verified",
+    "canReceivePayments": true,
+    "requiresOnboarding": false,
+    "lastChecked": "2025-06-21T21:00:31.486Z",
+    "verifiedAt": "2025-06-21T20:49:31.558Z"
+  }
+}
+```
+
+---
+
+## 7️⃣ **CRÉER TRAJET (CONDUCTRICE)**
+
+### **ENDPOINT :** `POST /api/trips`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_CONDUCTRICE",
+  "Content-Type": "application/json"
+}
+```
+
+### **BODY :**
+```json
+{
+  "departure": {
+    "city": "Paris"
+  },
+  "arrival": {
+    "city": "Lyon"
+  },
+  "departureDateTime": "2025-06-25T14:00:00.000Z",
+  "availableSeats": 3,
+  "description": "Trajet Paris-Lyon avec Laddy"
+}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "message": "Trajet créé avec succès",
+  "trip": {
+    "id": "68571e3e86fae60ecee79394",
+    "departure": {
+      "city": "Paris",
+      "address": "Châtelet-Les Halles, 75001 Paris",
+      "coordinates": {
+        "lat": 48.8566,
+        "lng": 2.3522
+      }
+    },
+    "arrival": {
+      "city": "Lyon",
+      "address": "Gare Part-Dieu, 69003 Lyon",
+      "coordinates": {
+        "lat": 45.764,
+        "lng": 4.8357
+      }
+    },
+    "departureDateTime": "2025-06-25T14:00:00.000Z",
+    "estimatedArrivalDateTime": "2025-06-25T19:10:00.000Z",
+    "availableSeats": 3,
+    "totalSeats": 4,
+    "pricePerSeat": 255.76,
+    "distance": 465,
+    "estimatedDuration": 310,
+    "description": "Trajet Paris-Lyon avec Laddy",
+    "driver": {
+      "id": "6857185c86fae60ecee79362",
+      "displayName": "Laddy Conductrice",
+      "email": "laddy@gmail.com"
+    },
+    "createdAt": "2025-06-21T21:03:58.564Z"
+  }
+}
+```
+
+---
+
+## 8️⃣ **RECHERCHER TRAJETS**
+
+### **ENDPOINT :** `GET /api/trips/search`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_USER"
+}
+```
+
+### **QUERY PARAMS :**
+```
+?departure=Paris&arrival=Lyon&date=2025-06-25
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "trips": [
+    {
+      "id": "68571e3e86fae60ecee79394",
+      "departure": {
+        "city": "Paris",
+        "address": "Châtelet-Les Halles, 75001 Paris"
+      },
+      "arrival": {
+        "city": "Lyon",
+        "address": "Gare Part-Dieu, 69003 Lyon"
+      },
+      "departureDateTime": "2025-06-25T14:00:00.000Z",
+      "availableSeats": 3,
+      "pricePerSeat": 255.76,
+      "distance": 465,
+      "driver": {
+        "id": "6857185c86fae60ecee79362",
+        "displayName": "Laddy Conductrice",
+        "rating": 0
+      }
+    }
+  ]
+}
+```
+
+---
+
+## 9️⃣ **RÉSERVER TRAJET (PASSAGÈRE)**
+
+### **ENDPOINT :** `POST /api/bookings`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_PASSAGERE",
+  "Content-Type": "application/json"
+}
+```
+
+### **BODY :**
+```json
+{
+  "tripId": "68571e3e86fae60ecee79394",
+  "numberOfSeats": 1,
+  "message": "Bonjour Laddy, je souhaite réserver une place pour Lyon !"
+}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "message": "Booking request created successfully",
+  "booking": {
+    "id": "68571ea586fae60ecee7939b",
+    "trip": {
+      "id": "68571e3e86fae60ecee79394",
+      "route": "Paris → Lyon",
+      "departureDateTime": "2025-06-25T14:00:00.000Z",
+      "distance": 465
+    },
+    "passenger": {
+      "id": "6857188d86fae60ecee79366",
+      "name": "Hélène Passagère",
+      "email": "helene@gmail.com"
+    },
+    "driver": {
+      "id": "6857185c86fae60ecee79362",
+      "name": "Laddy Conductrice",
+      "email": "laddy@gmail.com"
+    },
+    "numberOfSeats": 1,
+    "totalPrice": 255.76,
+    "status": "pending",
+    "requestedAt": "2025-06-21T21:05:41.689Z"
+  }
+}
+```
+
+---
+
+## 🔟 **CRÉER PAIEMENT (PASSAGÈRE)**
+
+### **ENDPOINT :** `POST /api/payments/create-trip-payment`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_PASSAGERE",
+  "Content-Type": "application/json"
+}
+```
+
+### **BODY :**
+```json
+{
+  "bookingId": "68571ea586fae60ecee7939b"
+}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "message": "Payment created with automatic transfer",
+  "paymentIntent": {
+    "id": "pi_3RcYdq4GtFeoWSgT0OqVjkjf",
+    "clientSecret": "pi_3RcYdq4GtFeoWSgT0OqVjkjf_secret_KPZdeUnlZZAK871MVjjrBxs8n",
+    "amount": 25575,
+    "currency": "eur"
+  },
+  "breakdown": {
+    "totalEur": 255.75,
+    "driverEur": 209.25,
+    "commissionEur": 46.5
+  }
+}
+```
+
+---
+
+## 1️⃣1️⃣ **FINALISER PAIEMENT (PASSAGÈRE)**
+
+### **ENDPOINT :** `POST /api/payments/finalize-trip-payment`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_PASSAGERE",
+  "Content-Type": "application/json"
+}
+```
+
+### **BODY :**
+```json
+{
+  "bookingId": "68571ea586fae60ecee7939b",
+  "paymentMethodId": "pm_card_visa"
+}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "message": "Trip payment finalized successfully",
+  "booking": {
+    "id": "68571ea586fae60ecee7939b",
+    "status": "confirmed",
+    "trip": {
+      "route": "Paris → Lyon",
+      "date": "2025-06-25T14:00:00.000Z"
+    },
+    "payment": {
+      "status": "succeeded",
+      "amount": 255.75,
+      "paidAt": "2025-06-21T21:10:15.123Z"
+    }
+  }
+}
+```
+
+---
+
+## 1️⃣2️⃣ **OBTENIR PROFIL UTILISATEUR**
+
+### **ENDPOINT :** `GET /api/auth/me`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_USER"
+}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "user": {
+    "id": "6857185c86fae60ecee79362",
+    "email": "laddy@gmail.com",
+    "profile": {
+      "displayName": "Laddy Conductrice",
+      "firstName": "Laddy",
+      "lastName": "Driver",
+      "avatar": "",
+      "gender": "femme",
+      "phone": "+33123456789"
+    },
+    "subscription": {
+      "plan": "premium",
+      "isActive": true,
+      "status": "active"
+    },
+    "stats": {
+      "rating": 0,
+      "tripsAsDriver": 1,
+      "tripsCompleted": 0
+    }
+  }
+}
+```
+
+---
+
+## 1️⃣3️⃣ **LISTER MES RÉSERVATIONS**
+
+### **ENDPOINT :** `GET /api/bookings/my-bookings`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_USER"
+}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "bookings": [
+    {
+      "id": "68571ea586fae60ecee7939b",
+      "status": "confirmed",
+      "role": "passenger",
+      "trip": {
+        "id": "68571e3e86fae60ecee79394",
+        "route": "Paris → Lyon",
+        "departureDateTime": "2025-06-25T14:00:00.000Z",
+        "pricePerSeat": 255.76
+      },
+      "numberOfSeats": 1,
+      "totalPrice": 255.76,
+      "driver": {
+        "id": "6857185c86fae60ecee79362",
+        "displayName": "Laddy Conductrice",
+        "avatar": ""
+      },
+      "payment": {
+        "status": "succeeded",
+        "amount": 255.75,
+        "paidAt": "2025-06-21T21:10:15.123Z"
+      },
+      "requestedAt": "2025-06-21T21:05:41.689Z"
+    }
+  ]
+}
+```
+
+---
+
+## 1️⃣4️⃣ **LISTER MES TRAJETS (CONDUCTRICE)**
+
+### **ENDPOINT :** `GET /api/trips/my-trips`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_CONDUCTRICE"
+}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "trips": [
+    {
+      "id": "68571e3e86fae60ecee79394",
+      "departure": {
+        "city": "Paris",
+        "address": "Châtelet-Les Halles, 75001 Paris"
+      },
+      "arrival": {
+        "city": "Lyon",
+        "address": "Gare Part-Dieu, 69003 Lyon"
+      },
+      "departureDateTime": "2025-06-25T14:00:00.000Z",
+      "availableSeats": 2,
+      "totalSeats": 4,
+      "pricePerSeat": 255.76,
+      "status": "active",
+      "bookings": [
+        {
+          "id": "68571ea586fae60ecee7939b",
+          "passenger": {
+            "displayName": "Hélène Passagère"
+          },
+          "numberOfSeats": 1,
+          "status": "confirmed"
+        }
+      ],
+      "createdAt": "2025-06-21T21:03:58.564Z"
+    }
+  ]
+}
+```
+
+---
+
+## 1️⃣5️⃣ **STATUT FINANCIER CONDUCTRICE**
+
+### **ENDPOINT :** `GET /api/payments/driver/financial-status`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_CONDUCTRICE"
+}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "data": {
+    "kyc": {
+      "hasConnectAccount": true,
+      "status": "verified",
+      "canReceivePayments": true,
+      "connectAccountId": "acct_1RcYIIQQBZ8fBavl"
+    },
+    "balance": {
+      "totalAvailable": 209.25,
+      "totalPending": 0,
+      "available": [
+        {
+          "amount": 20925,
+          "currency": "eur"
+        }
+      ]
+    },
+    "summary": {
+      "hasStripeAccount": true,
+      "isVerified": true,
+      "canReceivePayments": true,
+      "availableBalance": 209.25,
+      "pendingBalance": 0
+    }
+  }
+}
+```
+
+---
+
+## 1️⃣6️⃣ **DÉCONNEXION**
+
+### **ENDPOINT :** `POST /api/auth/logout`
+### **HEADERS :**
+```json
+{
+  "Authorization": "Bearer TOKEN_USER",
+  "Content-Type": "application/json"
+}
+```
+
+### **BODY :** *(Vide)*
+```json
+{}
+```
+
+### **RÉPONSE :**
+```json
+{
+  "success": true,
+  "message": "Logout successful"
+}
+```
+
+---
+
+## 📊 **RÉSUMÉ DES ENDPOINTS PAR RÔLE**
+
+### **👤 UTILISATEUR GÉNÉRAL :**
+- `POST /api/auth/register` - Inscription
+- `POST /api/auth/login` - Connexion
+- `GET /api/auth/me` - Profil
+- `POST /api/auth/logout` - Déconnexion
+- `POST /api/payments/subscribe` - Abonnement Premium
+
+### **🚗 CONDUCTRICE :**
+- `POST /api/kyc/start` - Démarrer KYC
+- `GET /api/kyc/status` - Statut KYC
+- `POST /api/trips` - Créer trajet
+- `GET /api/trips/my-trips` - Mes trajets
+- `GET /api/payments/driver/financial-status` - Statut financier
+
+### **🎒 PASSAGÈRE :**
+- `GET /api/trips/search` - Rechercher trajets
+- `POST /api/bookings` - Réserver trajet
+- `GET /api/bookings/my-bookings` - Mes réservations
+- `POST /api/payments/create-trip-payment` - Créer paiement
+- `POST /api/payments/finalize-trip-payment` - Finaliser paiement
+
+---
+
+## 🔑 **NOTES IMPORTANTES POUR FLUTTER**
+
+1. **TOKEN** : Stocker le token JWT après login/register
+2. **HEADERS** : Toujours inclure `Authorization: Bearer TOKEN`
+3. **KYC** : Obligatoire pour conductrices avant création trajets
+4. **ABONNEMENT** : Obligatoire pour toutes les fonctionnalités
+5. **PAIEMENT** : Utiliser Stripe SDK Flutter avec `clientSecret`
+
+**Cette documentation est complète et testée ! 🎯**

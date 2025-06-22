@@ -194,6 +194,35 @@ const userSchema = new mongoose.Schema({
     customerId: String,
     defaultPaymentMethodId: String
   },
+  kyc: {
+    stripeConnectAccountId: String,
+    status: {
+      type: String,
+      enum: ['not_started', 'pending', 'onboarding', 'incomplete', 'verified', 'rejected'],
+      default: 'not_started'
+    },
+    accountType: {
+      type: String,
+      enum: ['express', 'custom'],
+      default: 'express'
+    },
+    createdAt: Date,
+    lastChecked: Date,
+    requiresOnboarding: {
+      type: Boolean,
+      default: true
+    },
+    canReceivePayments: {
+      type: Boolean,
+      default: false
+    },
+    onboardingUrl: String,
+    onboardingExpiresAt: Date,
+    lastOnboardingLinkCreated: Date,
+    verifiedAt: Date,
+    rejectedAt: Date,
+    rejectionReason: String
+  },
   bankingInfo: {
     accountHolderName: {
       type: String,
@@ -275,7 +304,11 @@ userSchema.methods.hasActiveSubscription = function() {
 };
 
 userSchema.methods.canCreateTrips = function() {
-  return this.hasActiveSubscription() || this.subscription.plan === 'free';
+  return this.hasActiveSubscription(); // ✅ STRICT - plus de plan gratuit
+};
+
+userSchema.methods.canMakeBookings = function() {
+  return this.hasActiveSubscription(); // ✅ STRICT pour réservations
 };
 
 userSchema.methods.getSubscriptionStatus = function() {
@@ -356,6 +389,108 @@ userSchema.methods.resetLoginAttempts = function() {
       'security.lockUntil': 1
     }
   });
+};
+
+// ✅ NOUVELLES MÉTHODES KYC À AJOUTER
+
+
+// Méthode pour vérifier si l'utilisateur peut créer des trajets payants
+userSchema.methods.canCreatePaidTrips = function() {
+  const kycStatus = this.getKycStatus();
+  return kycStatus.canReceivePayments;
+};
+
+// Méthode pour vérifier si l'utilisateur peut recevoir des virements
+userSchema.methods.canReceivePayouts = function() {
+  return this.stripe?.payoutsEnabled === true && 
+         this.kyc?.status === 'verified';
+};
+
+// Méthode pour obtenir le prochain lien d'onboarding valide
+userSchema.methods.getValidOnboardingLink = function() {
+  if (!this.kyc?.onboardingLinks || this.kyc.onboardingLinks.length === 0) {
+    return null;
+  }
+  
+  // Trouver le lien le plus récent non utilisé et non expiré
+  const now = new Date();
+  const validLink = this.kyc.onboardingLinks
+    .filter(link => !link.used && link.expiresAt > now)
+    .sort((a, b) => b.createdAt - a.createdAt)[0];
+    
+  return validLink || null;
+};
+
+// ✅ CORRIGER la méthode getKycStatus
+userSchema.methods.getKycStatus = function() {
+  const hasConnectAccount = !!(this.kyc && this.kyc.stripeConnectAccountId);
+  const kycStatus = this.kyc ? this.kyc.status : 'not_started';
+  
+  // ✅ CORRECTION : Vérifier aussi que le statut est 'verified'
+  const canReceivePayments = hasConnectAccount && 
+    kycStatus === 'verified' && 
+    this.kyc.canReceivePayments === true;
+  
+  let message = '';
+  let nextAction = '';
+  
+  switch (kycStatus) {
+    case 'not_started':
+      message = 'Commencez votre vérification pour recevoir des paiements';
+      nextAction = 'start_kyc';
+      break;
+    case 'pending':
+      message = 'Vérification en cours, vous recevrez un email de confirmation';
+      nextAction = 'wait';
+      break;
+    case 'onboarding':
+      message = 'Complétez votre vérification sur Stripe';
+      nextAction = 'complete_onboarding';
+      break;
+    case 'incomplete':
+      message = 'Informations manquantes, complétez votre profil';
+      nextAction = 'complete_profile';
+      break;
+    case 'verified':
+      message = 'Compte vérifié, vous pouvez recevoir des paiements';
+      nextAction = 'none';
+      break;
+    case 'rejected':
+      message = 'Vérification refusée, contactez le support';
+      nextAction = 'contact_support';
+      break;
+    default:
+      message = 'Statut inconnu';
+      nextAction = 'refresh_status';
+  }
+  
+  return {
+    hasConnectAccount,
+    connectAccountId: this.kyc?.stripeConnectAccountId || null,
+    status: kycStatus,
+    canReceivePayments,
+    requiresOnboarding: this.kyc?.requiresOnboarding !== false,
+    message,
+    nextAction,
+    createdAt: this.kyc?.createdAt || null,
+    verifiedAt: this.kyc?.verifiedAt || null,
+    lastChecked: this.kyc?.lastChecked || null,
+    stripe: {
+      chargesEnabled: this.stripe?.chargesEnabled || false,
+      payoutsEnabled: this.stripe?.payoutsEnabled || false,
+      detailsSubmitted: this.stripe?.detailsSubmitted || false
+    }
+  };
+};
+
+userSchema.methods.canCreatePaidTrips = function() {
+  const kycStatus = this.getKycStatus();
+  return kycStatus.canReceivePayments;
+};
+
+userSchema.methods.canReceivePayouts = function() {
+  return this.stripe?.payoutsEnabled === true && 
+         this.kyc?.status === 'verified';
 };
 
 module.exports = mongoose.model('User', userSchema);

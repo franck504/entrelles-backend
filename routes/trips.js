@@ -1,283 +1,38 @@
 const express = require('express');
 const router = express.Router();
 
-// Importation des controllers et middlewares
 const {
   createTrip,
-  searchTrips,
-  getMyTrips,
+  getAllTrips,
   getTripById,
   updateTrip,
   deleteTrip,
-  cancelTrip,
-  getPopularTrips
+  searchTrips,
+  getMyTrips,
+  getTripStats
 } = require('../controllers/tripController');
 
 const { protect } = require('../middleware/authMiddleware');
-const { enrichTripData } = require('../middleware/tripValidation'); // ✅ AJOUTÉ
+const { requireActiveSubscription } = require('../middleware/subscriptionMiddleware');
+const { enrichTripData, requireKycVerification } = require('../middleware/tripValidation');
 
-// Validation middleware pour les trajets
-const { body, query, validationResult } = require('express-validator');
+// ✅ ROUTES PUBLIQUES EN PREMIER
+router.get('/search', searchTrips);
+router.get('/', getAllTrips);
 
-// Middleware pour gérer les erreurs de validation
-const handleValidationErrors = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success: false,
-      message: 'Validation errors',
-      errors: errors.array().map(error => ({
-        field: error.path,
-        message: error.msg,
-        value: error.value
-      }))
-    });
-  }
-  next();
-};
+// ✅ ROUTES PROTÉGÉES
+router.use(protect);
 
-// Validation pour la création de trajet
-const validateCreateTrip = [
-  body('departure.city')
-    .notEmpty()
-    .trim()
-    .withMessage('Departure city is required'),
-    
-  body('departure.address')
-    .notEmpty()
-    .trim()
-    .withMessage('Departure address is required'),
-    
-  body('departure.coordinates.lat')
-    .isFloat({ min: -90, max: 90 })
-    .withMessage('Valid departure latitude is required'),
-    
-  body('departure.coordinates.lng')
-    .isFloat({ min: -180, max: 180 })
-    .withMessage('Valid departure longitude is required'),
-    
-  body('arrival.city')
-    .notEmpty()
-    .trim()
-    .withMessage('Arrival city is required'),
-    
-  body('arrival.address')
-    .notEmpty()
-    .trim()
-    .withMessage('Arrival address is required'),
-    
-  body('arrival.coordinates.lat')
-    .isFloat({ min: -90, max: 90 })
-    .withMessage('Valid arrival latitude is required'),
-    
-  body('arrival.coordinates.lng')
-    .isFloat({ min: -180, max: 180 })
-    .withMessage('Valid arrival longitude is required'),
-    
-  body('departureDateTime')
-    .isISO8601()
-    .withMessage('Valid departure date and time is required')
-    .custom((value) => {
-      if (new Date(value) <= new Date()) {
-        throw new Error('Departure date must be in the future');
-      }
-      return true;
-    }),
-    
-  body('estimatedDuration')
-    .isInt({ min: 1, max: 1440 })
-    .withMessage('Estimated duration must be between 1 and 1440 minutes'),
-    
-  body('availableSeats')
-    .isInt({ min: 1, max: 7 })
-    .withMessage('Available seats must be between 1 and 7'),
-    
-  body('pricePerSeat')
-    .isFloat({ min: 0, max: 200 })
-    .withMessage('Price per seat must be between 0 and 200 euros'),
-    
-  body('distance')
-    .isFloat({ min: 1, max: 2000 })
-    .withMessage('Distance must be between 1 and 2000 km'),
-    
-  body('description')
-    .optional()
-    .isLength({ max: 1000 })
-    .withMessage('Description cannot exceed 1000 characters'),
-    
-  body('notes')
-    .optional()
-    .isLength({ max: 500 })
-    .withMessage('Notes cannot exceed 500 characters'),
-    
-  handleValidationErrors
-];
+// ✅ ROUTES STATIQUES AVANT ROUTES DYNAMIQUES
+router.get('/my-trips', requireActiveSubscription, getMyTrips);
+router.get('/my-stats', requireActiveSubscription, getTripStats);
 
-// ✅ NOUVELLE VALIDATION POUR RECHERCHE DYNAMIQUE
-const validateSearchTripsFlexible = [
-  query('departureCity')
-    .optional()
-    .trim()
-    .isLength({ min: 2 })
-    .withMessage('Departure city must be at least 2 characters'),
-    
-  query('arrivalCity')
-    .optional()
-    .trim()
-    .isLength({ min: 2 })
-    .withMessage('Arrival city must be at least 2 characters'),
-    
-  query('departureDate')
-    .optional()
-    .isISO8601()
-    .withMessage('Valid departure date is required'),
-    
-  query('passengers')
-    .optional()
-    .isInt({ min: 1, max: 7 })
-    .withMessage('Passengers must be between 1 and 7'),
-    
-  query('maxPrice')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Max price must be a positive number'),
-    
-  query('minPrice')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Min price must be a positive number'),
-    
-  query('maxDuration')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Max duration must be a positive number'),
-    
-  query('page')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Page must be a positive integer'),
-    
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 50 })
-    .withMessage('Limit must be between 1 and 50'),
-    
-  // ✅ Validation personnalisée : au moins un critère
-  (req, res, next) => {
-    const { departureCity, arrivalCity, departureDate } = req.query;
-    
-    if (!departureCity && !arrivalCity && !departureDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Au moins un critère de recherche est requis',
-        errors: [{
-          field: 'search',
-          message: 'Veuillez spécifier au moins une ville de départ, d\'arrivée ou une date',
-          value: null
-        }]
-      });
-    }
-    
-    next();
-  },
-    
-  handleValidationErrors
-];
+// ✅ CRÉATION AVEC KYC OBLIGATOIRE
+router.post('/', requireActiveSubscription, requireKycVerification, enrichTripData, createTrip);
 
-// Validation pour la recherche de trajets (ANCIENNE - gardée pour compatibilité)
-const validateSearchTrips = [
-  query('departureCity')
-    .notEmpty()
-    .trim()
-    .withMessage('Departure city is required'),
-    
-  query('arrivalCity')
-    .notEmpty()
-    .trim()
-    .withMessage('Arrival city is required'),
-    
-  query('departureDate')
-    .isISO8601()
-    .withMessage('Valid departure date is required'),
-    
-  query('passengers')
-    .optional()
-    .isInt({ min: 1, max: 7 })
-    .withMessage('Passengers must be between 1 and 7'),
-    
-  query('maxPrice')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Max price must be a positive number'),
-    
-  query('page')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Page must be a positive integer'),
-    
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 50 })
-    .withMessage('Limit must be between 1 and 50'),
-    
-  handleValidationErrors
-];
-
-// Validation pour la mise à jour de trajet
-const validateUpdateTrip = [
-  body('departure.city')
-    .optional()
-    .notEmpty()
-    .trim()
-    .withMessage('Departure city cannot be empty'),
-    
-  body('arrival.city')
-    .optional()
-    .notEmpty()
-    .trim()
-    .withMessage('Arrival city cannot be empty'),
-    
-  body('departureDateTime')
-    .optional()
-    .isISO8601()
-    .withMessage('Valid departure date and time is required')
-    .custom((value) => {
-      if (new Date(value) <= new Date()) {
-        throw new Error('Departure date must be in the future');
-      }
-      return true;
-    }),
-    
-  body('availableSeats')
-    .optional()
-    .isInt({ min: 1, max: 7 })
-    .withMessage('Available seats must be between 1 and 7'),
-    
-  body('pricePerSeat')
-    .optional()
-    .isFloat({ min: 0, max: 200 })
-    .withMessage('Price per seat must be between 0 and 200 euros'),
-    
-  handleValidationErrors
-];
-
-// Routes publiques
-// ✅ NOUVELLE ROUTE - Recherche flexible pour Flutter
-router.get('/search', validateSearchTripsFlexible, searchTrips);
-
-// ✅ ANCIENNE ROUTE - Recherche stricte (gardée pour compatibilité)
-router.get('/search-strict', validateSearchTrips, searchTrips);
-
-router.get('/popular', getPopularTrips);
+// ✅ ROUTES DYNAMIQUES À LA FIN
 router.get('/:id', getTripById);
-
-// Routes protégées (nécessitent une authentification)
-router.use(protect); // Toutes les routes suivantes nécessitent une authentification
-
-router.post('/', enrichTripData, createTrip); // ✅ MIDDLEWARE AJOUTÉ
-router.get('/', getMyTrips); // Mes trajets
-router.put('/:id', validateUpdateTrip, updateTrip);
-router.delete('/:id', deleteTrip);
-router.patch('/:id/cancel', cancelTrip);
+router.put('/:id', requireActiveSubscription, requireKycVerification, updateTrip);
+router.delete('/:id', requireActiveSubscription, deleteTrip);
 
 module.exports = router;

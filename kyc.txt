@@ -1,0 +1,28 @@
+Oui, il est tout à fait possible de structurer les paiements dans votre application de réservation de voyages de manière à ce que :
+
+1. **Le passager paie le conducteur** directement pour le trajet, sans que le conducteur ait besoin de passer par une vérification KYC complexe.
+
+2. **Le passager paie également l'application** pour la commission, de manière distincte.
+
+### 🛣️ Structure des paiements
+
+#### 1. Paiement du passager au conducteur
+
+* **Stripe Connect (Express ou Custom)** : Le conducteur doit disposer d'un compte Stripe Connect pour recevoir des paiements. Cependant, Stripe exige généralement une vérification KYC pour les comptes destinés à recevoir des paiements. Cette vérification peut inclure la soumission d'une pièce d'identité, d'une photo en direct (selfie) et d'un justificatif de domicile . Il est donc difficile d'éviter cette étape.([reddit.com][1], [support.poparide.com][2])
+
+#### 2. Paiement du passager à l'application
+
+* **Paiement direct à l'application** : Le passager effectue un paiement séparé à l'application pour la commission. Cela peut être géré via un `PaymentIntent` Stripe, où l'application est le seul destinataire des fonds.
+
+### ✅ Recommandations
+
+* **Vérification KYC pour les conducteurs** : Bien que la vérification KYC puisse être perçue comme complexe, elle est généralement requise pour les comptes destinés à recevoir des paiements via Stripe Connect. Il est important de communiquer clairement avec les conducteurs sur la nécessité de cette vérification et de les accompagner dans le processus.
+
+* **Séparation des paiements** : Assurez-vous que les paiements du passager à l'application et au conducteur sont bien distincts, tant au niveau technique qu'au niveau de la communication avec les utilisateurs.
+
+* **Conformité réglementaire** : Veillez à respecter les réglementations locales en matière de paiements et de vérification d'identité, notamment en ce qui concerne les exigences KYC.
+
+Si vous souhaitez des informations plus détaillées sur la mise en œuvre technique de ces paiements via Stripe, n'hésitez pas à demander.
+
+[1]: https://www.reddit.com/r/stripe/comments/ozv2s1?utm_source=chatgpt.com "I'm setting up Stripe Connect for the first time. It seems to require users to create their own Stripe accounts to receive payouts. Websites like Gumroad only require people to enter their credit card info to receive payouts. Is there a way to accomplish this with stripe?"
+[2]: https://support.poparide.com/en/articles/11028266-bank-account-verification-with-stripe?utm_source=chatgpt.com "Bank account verification with Stripe | Poparide Help Centre"
