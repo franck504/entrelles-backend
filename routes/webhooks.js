@@ -87,15 +87,18 @@ const handleStripeWebhook = async (req, res) => {
 
             // 📋 === ABONNEMENTS ===
             case 'customer.subscription.created':
-                await handleSubscriptionCreated(event.data.object);
+
+                await handleCustomerSubscriptionCreated(event.data.object);
                 break;
 
             case 'customer.subscription.updated':
-                await handleSubscriptionUpdated(event.data.object);
+
+                await handleCustomerSubscriptionUpdated(event.data.object);
                 break;
 
             case 'customer.subscription.deleted':
-                await handleSubscriptionDeleted(event.data.object);
+
+                await handleCustomerSubscriptionDeleted(event.data.object);
                 break;
 
             case 'customer.subscription.trial_will_end':
