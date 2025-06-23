@@ -1,168 +1,137 @@
                                                                                                                                                                         
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/auth/register \
+┌──(franck㉿f504)-[~]
+└─$ curl -X POST https://entrelles-backend.vercel.app/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "miravo@gmail.com",
+    "email": "alima.prod@gmail.com",
     "password": "123azeqsD",
-    "displayName": "Miravo Conductrice",
-    "firstName": "Miravo",
-    "lastName": "Driver",
+    "displayName": "Alima Asma",
+    "firstName": "Alima",
+    "lastName": "Asma",
     "gender": "femme",
     "phone": "+33111222333"
   }'
 
-{"success":true,"message":"Registration successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c","user":{"id":"685768efa0050448a3325b16","email":"miravo@gmail.com","profile":{"displayName":"Miravo Conductrice","firstName":"Miravo","lastName":"Driver","avatar":"","gender":"femme"},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false},"stats":{"tripsAsDriver":0,"tripsAsPassenger":0,"tripsCompleted":0,"rating":0,"ratingsCount":0,"totalEarnings":0,"responseTime":0,"cancellationRate":0},"createdAt":"2025-06-22T02:22:39.135Z"}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "fanasina@gmail.com",
-    "password": "123azeqsD",
-    "displayName": "Fanasina Passagère",
-    "firstName": "Fanasina",
-    "lastName": "Passenger",
-    "gender": "femme",
-    "phone": "+33444555666"
-  }'
-
-{"success":true,"message":"Registration successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-l60NsCluj32kT_Jb2ltIRlsJ0aKzayD9Ks","user":{"id":"685768f7a0050448a3325b1a","email":"fanasina@gmail.com","profile":{"displayName":"Fanasina Passagère","firstName":"Fanasina","lastName":"Passenger","avatar":"","gender":"femme"},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false},"stats":{"tripsAsDriver":0,"tripsAsPassenger":0,"tripsCompleted":0,"rating":0,"ratingsCount":0,"totalEarnings":0,"responseTime":0,"cancellationRate":0},"createdAt":"2025-06-22T02:22:47.728Z"}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/payments/subscribe \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
+{"success":true,"message":"Registration successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3YTc3YTNjZjIxODZiOGIxY2M3YzIiLCJpYXQiOjE3NTA1NzQ5NzAsImV4cCI6MTc1MTE3OTc3MH0._itAxkp9RWOuULA6GqF6ErSwgVU5zFDHKZ3kYA5AR9k","user":{"id":"6857a77a3cf2186b8b1cc7c2","email":"alimaprod@gmail.com","profile":{"displayName":"Alima Asma","firstName":"Alima","lastName":"Asma","avatar":"","gender":"femme"},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false},"stats":{"tripsAsDriver":0,"tripsAsPassenger":0,"tripsCompleted":0,"rating":0,"ratingsCount":0,"totalEarnings":0,"responseTime":0,"cancellationRate":0},"createdAt":"2025-06-22T06:49:30.047Z"}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~]
+└─$ curl -X POST https://entrelles-backend.vercel.app/api/payments/subscribe \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3YTc3YTNjZjIxODZiOGIxY2M3YzIiLCJpYXQiOjE3NTA1NzQ5NzAsImV4cCI6MTc1MTE3OTc3MH0._itAxkp9RWOuULA6GqF6ErSwgVU5zFDHKZ3kYA5AR9k" \
   -H "Content-Type: application/json" \
   -d '{
     "priceId": "price_1RYa3b4GtFeoWSgT7uK1TC0I"
   }'
 
-{"success":true,"message":"🎉 Bienvenue dans Entrelles Premium !","subscription":{"id":"sub_1Rcda24GtFeoWSgT3ziiucyk","status":"active","isActive":true}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/payments/subscribe \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-l60NsCluj32kT_Jb2ltIRlsJ0aKzayD9Ks" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "priceId": "price_1RYa3b4GtFeoWSgT7uK1TC0I"
-  }'
-
-{"success":true,"message":"🎉 Bienvenue dans Entrelles Premium !","subscription":{"id":"sub_1RcdaO4GtFeoWSgTm8c3Rv7u","status":"active","isActive":true}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/kyc/start \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
+{"success":true,"message":"🎉 Bienvenue dans Entrelles Premium !","subscription":{"id":"sub_1Rchjz4GtFeoWSgTYCIXvCId","status":"active","isActive":true,"plan":"premium"}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~]
+└─$ curl -X POST https://entrelles-backend.vercel.app/api/kyc/start \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3YTc3YTNjZjIxODZiOGIxY2M3YzIiLCJpYXQiOjE3NTA1NzQ5NzAsImV4cCI6MTc1MTE3OTc3MH0._itAxkp9RWOuULA6GqF6ErSwgVU5zFDHKZ3kYA5AR9k" \
   -H "Content-Type: application/json"
 
-{"success":true,"message":"KYC process started successfully","account":{"id":"acct_1RcdkG4CQCv9UG1T","type":"express","country":"FR"},"onboarding":{"url":"https://connect.stripe.com/setup/e/acct_1RcdkG4CQCv9UG1T/XXaKyW8nQAoL","expires_at":1750560004,"expiresIn":"24 hours"}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/kyc/refresh \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
+{"success":true,"message":"KYC process started successfully","account":{"id":"acct_1Rchm83dM0E4s9VI","type":"express","country":"FR"},"onboarding":{"url":"https://connect.stripe.com/setup/e/acct_1Rchm83dM0E4s9VI/U08zUyZtHp39","expires_at":1750575495,"expiresIn":"24 hours"}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~]
+└─$ curl -X POST https://entrelles-backend.vercel.app/api/kyc/refresh \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3YTc3YTNjZjIxODZiOGIxY2M3YzIiLCJpYXQiOjE3NTA1NzQ5NzAsImV4cCI6MTc1MTE3OTc3MH0._itAxkp9RWOuULA6GqF6ErSwgVU5zFDHKZ3kYA5AR9k" \
   -H "Content-Type: application/json"
 
-{"success":true,"message":"KYC status refreshed successfully","kyc":{"status":"verified","canReceivePayments":true,"requiresOnboarding":false,"lastChecked":"2025-06-22T02:38:37.988Z","verifiedAt":"2025-06-22T02:37:41.562Z"}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/trips \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
+{"success":true,"message":"KYC status refreshed successfully","kyc":{"status":"verified","canReceivePayments":true,"requiresOnboarding":false,"lastChecked":"2025-06-22T06:55:56.821Z","verifiedAt":"2025-06-22T06:55:56.821Z"}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~]
+└─$ [200~curl -X POST https://entrelles-backend.vercel.app/api/trips \
+>   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3YTc3YTNjZjIxODZiOGIxY2M3YzIiLCJpYXQiOjE3NTA1NzQ5NzAsImV4cCI6MTc1MTE3OTc3MH0._itAxkp9RWOuULA6GqF6ErSwgVU5zFDHKZ3kYA5AR9k" \
+>   -H "Content-Type: application/json" \
+>   -d '{
+quote>     "departure": {
+quote>       "city": "Lyon"
+quote>     },
+quote>     "arrival": {
+quote>       "city": "Paris"
+quote>     },
+quote>     "departureDateTime": "2025-06-24T14:00:00.000Z",
+quote>     "availableSeats": 3,
+quote>     "description": "Trajet Lyon-Paris avec Alima, départ 14h"
+quote>   }'
+zsh: bad pattern: [200~curl
+                                                                                                                                                                        
+┌──(franck㉿f504)-[~]
+└─$ curl -X POST https://entrelles-backend.vercel.app/api/trips \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3YTc3YTNjZjIxODZiOGIxY2M3YzIiLCJpYXQiOjE3NTA1NzQ5NzAsImV4cCI6MTc1MTE3OTc3MH0._itAxkp9RWOuULA6GqF6ErSwgVU5zFDHKZ3kYA5AR9k" \
   -H "Content-Type: application/json" \
   -d '{
     "departure": {
-      "city": "Marseille"
+      "city": "Lyon"
     },
     "arrival": {
-      "city": "Nice"
+      "city": "Paris"
     },
-    "departureDateTime": "2025-06-23T10:00:00.000Z",
-    "availableSeats": 2,
-    "description": "Trajet Marseille-Nice avec Miravo, vue sur la mer !"
+    "departureDateTime": "2025-06-24T14:00:00.000Z",
+    "availableSeats": 3,
+    "description": "Trajet Lyon-Paris avec Alima, départ 14h"
   }'
 
-{"success":true,"message":"Trajet créé avec succès","trip":{"id":"68576cfd812dc266e2a83083","departure":{"city":"Marseille","address":"Vieux-Port, 13002 Marseille","coordinates":{"lat":43.2965,"lng":5.3698}},"arrival":{"city":"Nice","address":"Gare de Nice-Ville, 06000 Nice","coordinates":{"lat":43.7102,"lng":7.262}},"departureDateTime":"2025-06-23T10:00:00.000Z","estimatedArrivalDateTime":"2025-06-23T15:06:00.000Z","availableSeats":2,"totalSeats":4,"pricePerSeat":253.01,"distance":460,"estimatedDuration":306,"description":"Trajet Marseille-Nice avec Miravo, vue sur la mer !","driver":{"id":"685768efa0050448a3325b16","displayName":"Miravo Conductrice","email":"miravo@gmail.com"},"createdAt":"2025-06-22T02:39:57.576Z"}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/bookings \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-l60NsCluj32kT_Jb2ltIRlsJ0aKzayD9Ks" \
+{"success":true,"message":"Trajet créé avec succès","trip":{"id":"6857a93a3cf2186b8b1cc7e5","departure":{"city":"Lyon","address":"Gare Perrache, 69002 Lyon","coordinates":{"lat":45.764,"lng":4.8357}},"arrival":{"city":"Paris","address":"Châtelet-Les Halles, 75001 Paris","coordinates":{"lat":48.8566,"lng":2.3522}},"departureDateTime":"2025-06-24T14:00:00.000Z","estimatedArrivalDateTime":"2025-06-24T19:10:00.000Z","availableSeats":3,"totalSeats":4,"pricePerSeat":255.76,"distance":465,"estimatedDuration":310,"description":"Trajet Lyon-Paris avec Alima, départ 14h","driver":{"id":"6857a77a3cf2186b8b1cc7c2","displayName":"Alima Asma","email":"alimaprod@gmail.com"},"createdAt":"2025-06-22T06:56:58.567Z"}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~]
+└─$ curl -X POST https://entrelles-backend.vercel.app/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "tripId": "68576cfd812dc266e2a83083",
+    "email": "cecilia.razakason@gmail.com",
+    "password": "123azeqsD",
+    "displayName": "Cecilia Razakason",
+    "firstName": "Cecilia",
+    "lastName": "Razakason",
+    "gender": "femme",
+    "phone": "+33666777888"
+  }'
+
+{"success":true,"message":"Registration successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3YTk2ZjNjZjIxODZiOGIxY2M3ZTkiLCJpYXQiOjE3NTA1NzU0NzIsImV4cCI6MTc1MTE4MDI3Mn0.k3HqAqBmaD42d99HbV0POUu7i7V0wUpGGeqGS55_Kc0","user":{"id":"6857a96f3cf2186b8b1cc7e9","email":"ceciliarazakason@gmail.com","profile":{"displayName":"Cecilia Razakason","firstName":"Cecilia","lastName":"Razakason","avatar":"","gender":"femme"},"verification":{"isEmailVerified":false,"isPhoneVerified":false,"isIdentityVerified":false},"stats":{"tripsAsDriver":0,"tripsAsPassenger":0,"tripsCompleted":0,"rating":0,"ratingsCount":0,"totalEarnings":0,"responseTime":0,"cancellationRate":0},"createdAt":"2025-06-22T06:57:51.977Z"}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~]
+└─$ curl -X POST https://entrelles-backend.vercel.app/api/payments/subscribe \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3YTk2ZjNjZjIxODZiOGIxY2M3ZTkiLCJpYXQiOjE3NTA1NzU0NzIsImV4cCI6MTc1MTE4MDI3Mn0.k3HqAqBmaD42d99HbV0POUu7i7V0wUpGGeqGS55_Kc0" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "priceId": "price_1RYa3b4GtFeoWSgT7uK1TC0I"
+  }'
+
+{"success":true,"message":"🎉 Bienvenue dans Entrelles Premium !","subscription":{"id":"sub_1RchrZ4GtFeoWSgTseLpj0zi","status":"active","isActive":true,"plan":"premium"}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~]
+└─$ curl -X POST https://entrelles-backend.vercel.app/api/bookings \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3YTk2ZjNjZjIxODZiOGIxY2M3ZTkiLCJpYXQiOjE3NTA1NzU0NzIsImV4cCI6MTc1MTE4MDI3Mn0.k3HqAqBmaD42d99HbV0POUu7i7V0wUpGGeqGS55_Kc0" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tripId": "6857a93a3cf2186b8b1cc7e5",
     "numberOfSeats": 1,
-    "message": "Salut Miravo ! J'\''aimerais beaucoup faire ce trajet vers Nice. Merci !"
+    "message": "Salut Alima ! J'\''aimerais faire ce trajet Lyon-Paris avec toi. Merci !"
   }'
 
-{"success":true,"message":"Booking request created successfully","booking":{"id":"68576d47812dc266e2a8308a","trip":{"id":"68576cfd812dc266e2a83083","route":"Marseille → Nice","departureDateTime":"2025-06-23T10:00:00.000Z","distance":460},"passenger":{"id":"685768f7a0050448a3325b1a","name":"Fanasina Passagère","email":"fanasina@gmail.com"},"driver":{"id":"685768efa0050448a3325b16","name":"Miravo Conductrice","email":"miravo@gmail.com"},"numberOfSeats":1,"totalPrice":253.01,"status":"pending","requestedAt":"2025-06-22T02:41:11.310Z"}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X PUT http://localhost:3000/api/bookings/68576d47812dc266e2a8308a/confirm \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
+{"success":true,"message":"Booking request created successfully","booking":{"id":"6857aa0b3cf2186b8b1cc7f4","trip":{"id":"6857a93a3cf2186b8b1cc7e5","route":"Lyon → Paris","departureDateTime":"2025-06-24T14:00:00.000Z","distance":465},"passenger":{"id":"6857a96f3cf2186b8b1cc7e9","name":"Cecilia Razakason","email":"ceciliarazakason@gmail.com"},"driver":{"id":"6857a77a3cf2186b8b1cc7c2","name":"Alima Asma","email":"alimaprod@gmail.com"},"numberOfSeats":1,"totalPrice":255.76,"status":"pending","requestedAt":"2025-06-22T07:00:27.654Z"}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~]
+└─$ curl -X PUT https://entrelles-backend.vercel.app/api/bookings/6857aa0b3cf2186b8b1cc7f4/confirm \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3YTc3YTNjZjIxODZiOGIxY2M3YzIiLCJpYXQiOjE3NTA1NzQ5NzAsImV4cCI6MTc1MTE3OTc3MH0._itAxkp9RWOuULA6GqF6ErSwgVU5zFDHKZ3kYA5AR9k" \
   -H "Content-Type: application/json"
 
-{"success":false,"message":"Only the driver can confirm bookings"}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET http://localhost:3000/api/bookings/68576d47812dc266e2a8308a \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c"
-
-{"success":false,"message":"Not authorized to view this booking"}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X PUT http://localhost:3000/api/bookings/68576d47812dc266e2a8308a/accept \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
-  -H "Content-Type: application/json"
-
-{"message":"Route not found","path":"/api/bookings/68576d47812dc266e2a8308a/accept"}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X PUT http://localhost:3000/api/bookings/68576d47812dc266e2a8308a/approve \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
-  -H "Content-Type: application/json"
-
-{"message":"Route not found","path":"/api/bookings/68576d47812dc266e2a8308a/approve"}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ sed -i 's/req.user.id &&/req.user.id.toString() \&\&/' controllers/bookingController.js
-sed -i 's/req.user.id) {/req.user.id.toString()) {/' controllers/bookingController.js
-
-                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X PUT http://localhost:3000/api/bookings/68576d47812dc266e2a8308a/confirm \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
-  -H "Content-Type: application/json"
-
-{"success":true,"message":"Booking confirmed successfully","booking":{"id":"68576d47812dc266e2a8308a","status":"confirmed","confirmedAt":"2025-06-22T02:56:59.915Z","trip":{"route":"Marseille → Nice","date":"2025-06-23T10:00:00.000Z"},"passenger":{"name":"Fanasina Passagère","email":"fanasina@gmail.com"}}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/payments/create-trip-payment \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-l60NsCluj32kT_Jb2ltIRlsJ0aKzayD9Ks" \
+{"success":true,"message":"Booking confirmed successfully","booking":{"id":"6857aa0b3cf2186b8b1cc7f4","status":"confirmed","confirmedAt":"2025-06-22T07:01:41.927Z","trip":{"route":"Lyon → Paris","date":"2025-06-24T14:00:00.000Z"},"passenger":{"name":"Cecilia Razakason","email":"ceciliarazakason@gmail.com"}}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~]
+└─$ curl -X POST https://entrelles-backend.vercel.app/api/payments/create-trip-payment \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3YTk2ZjNjZjIxODZiOGIxY2M3ZTkiLCJpYXQiOjE3NTA1NzU0NzIsImV4cCI6MTc1MTE4MDI3Mn0.k3HqAqBmaD42d99HbV0POUu7i7V0wUpGGeqGS55_Kc0" \
   -H "Content-Type: application/json" \
   -d '{
-    "bookingId": "68576d47812dc266e2a8308a"
+    "bookingId": "6857aa0b3cf2186b8b1cc7f4"
   }'
 
-{"success":true,"message":"Payment created with automatic transfer","paymentIntent":{"id":"pi_3Rce824GtFeoWSgT1OSle6m5","clientSecret":"pi_3Rce824GtFeoWSgT1OSle6m5_secret_VxFzuqrRjMhLqSGoKiRbk1Ol3","amount":25300,"currency":"eur"},"breakdown":{"totalEur":253,"driverEur":207,"commissionEur":46}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/payments/finalize-trip-payment \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
+{"success":true,"message":"Payment created with automatic transfer","paymentIntent":{"id":"pi_3Rchv74GtFeoWSgT1kKLInAL","clientSecret":"pi_3Rchv74GtFeoWSgT1kKLInAL_secret_2nRQo2oX7gWPhnSpTeSDAqbUt","amount":25575,"currency":"eur"},"breakdown":{"totalEur":255.75,"driverEur":209.25,"commissionEur":46.5}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~]
+└─$ curl -X POST https://entrelles-backend.vercel.app/api/payments/finalize-trip-payment \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3YTk2ZjNjZjIxODZiOGIxY2M3ZTkiLCJpYXQiOjE3NTA1NzU0NzIsImV4cCI6MTc1MTE4MDI3Mn0.k3HqAqBmaD42d99HbV0POUu7i7V0wUpGGeqGS55_Kc0" \
   -H "Content-Type: application/json" \
   -d '{
-    "bookingId": "68576d47812dc266e2a8308a",
-    "paymentMethodId": "pm_card_visa"
+    "bookingId": "6857aa0b3cf2186b8b1cc7f4"
   }'
 
-{"success":false,"message":"Invalid token"}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X POST http://localhost:3000/api/payments/finalize-trip-payment \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-l60NsCluj32kT_Jb2ltIRlsJ0aKzayD9Ks" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "bookingId": "68576d47812dc266e2a8308a",
-    "paymentMethodId": "pm_card_visa"
-  }'
-
-{"success":true,"message":"🎉 Paiement finalisé avec succès !","booking":{"id":"68576d47812dc266e2a8308a","status":"confirmed","amount":253}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ # Vérifier le statut de la réservation
-curl -X GET http://localhost:3000/api/bookings/68576d47812dc266e2a8308a \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhmN2EwMDUwNDQ4YTMzMjViMWEiLCJpYXQiOjE3NTA1NTg5NjgsImV4cCI6MTc1MTE2Mzc2OH0.HqGfquUs-l60NsCluj32kT_Jb2ltIRlsJ0aKzayD9Ks"
-
-{"success":true,"booking":{"payment":{"commission":{"appFee":0,"driverAmount":0,"processingFee":0,"totalAmount":0},"driverPayout":{"status":[]},"stripePaymentIntentId":"pi_3Rce824GtFeoWSgT1OSle6m5","stripeClientSecret":"pi_3Rce824GtFeoWSgT1OSle6m5_secret_VxFzuqrRjMhLqSGoKiRbk1Ol3","amount":25300,"currency":"eur","status":"succeeded","driverAmount":20700,"commissionAmount":4600,"refundAmount":0,"paidAt":"2025-06-22T03:03:18.377Z","receiptUrl":"https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xUllPZlo0R3RGZW9XU2dUKPXk3cIGMgY42FM6NRk6LBYwlvw6aRtQ7yyLTXQafJ0ogf0ROw_qubRKLI5Bo9h_g9IyIR64ndXm3Uzl","stripeChargeId":"ch_3Rce824GtFeoWSgT1Y30tiKH"},"metadata":{"source":"web"},"_id":"68576d47812dc266e2a8308a","trip":{"departure":{"coordinates":{"lat":43.2965,"lng":5.3698},"city":"Marseille","address":"Vieux-Port, 13002 Marseille"},"arrival":{"coordinates":{"lat":43.7102,"lng":7.262},"city":"Nice","address":"Gare de Nice-Ville, 06000 Nice"},"vehicle":{"fuelType":"Essence"},"preferences":{"allowSmoking":false,"allowPets":false,"allowFood":true,"musicPreference":"medium","chatLevel":"normal","maxDetour":10},"recurrence":{"daysOfWeek":[]},"stats":{"views":0,"bookingRequests":0},"_id":"68576cfd812dc266e2a83083","driver":"685768efa0050448a3325b16","departureDateTime":"2025-06-23T10:00:00.000Z","estimatedArrivalDateTime":"2025-06-23T15:06:00.000Z","estimatedDuration":306,"availableSeats":1,"totalSeats":4,"pricePerSeat":253.01,"distance":460,"description":"Trajet Marseille-Nice avec Miravo, vue sur la mer !","status":"active","isRecurring":false,"createdAt":"2025-06-22T02:39:57.576Z","updatedAt":"2025-06-22T02:57:00.527Z","__v":0},"passenger":{"profile":{"displayName":"Fanasina Passagère","avatar":""},"_id":"685768f7a0050448a3325b1a","email":"fanasina@gmail.com"},"driver":{"profile":{"displayName":"Miravo Conductrice","avatar":""},"_id":"685768efa0050448a3325b16","email":"miravo@gmail.com"},"numberOfSeats":1,"totalPrice":253.01,"status":"confirmed","message":"Salut Miravo ! J'aimerais beaucoup faire ce trajet vers Nice. Merci !","requestedAt":"2025-06-22T02:41:11.310Z","createdAt":"2025-06-22T02:41:11.311Z","updatedAt":"2025-06-22T03:03:18.538Z","__v":1,"confirmedAt":"2025-06-22T03:03:18.378Z"}}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET http://localhost:3000/api/payments/driver/financial-status \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
+{"success":true,"message":"🎉 Paiement finalisé avec succès !","booking":{"id":"6857aa0b3cf2186b8b1cc7f4","status":"confirmed","amount":255.75}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~]
+└─$ curl -X GET https://entrelles-backend.vercel.app/api/payments/driver/financial-status \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3YTc3YTNjZjIxODZiOGIxY2M3YzIiLCJpYXQiOjE3NTA1NzQ5NzAsImV4cCI6MTc1MTE3OTc3MH0._itAxkp9RWOuULA6GqF6ErSwgVU5zFDHKZ3kYA5AR9k" \
   -H "Content-Type: application/json"
 
-{"message":"Route not found","path":"/api/payments/driver/financial-status"}                                                                                                                                                                        
-┌──(franck㉿f504)-[~/Documents/entrelles-backend]
-└─$ curl -X GET http://localhost:3000/api/payments/driver/financial-status \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODU3NjhlZmEwMDUwNDQ4YTMzMjViMTYiLCJpYXQiOjE3NTA1NTg5NTksImV4cCI6MTc1MTE2Mzc1OX0.c8OcnckglVos-vgg2BEkezspDw_s4mcBj1I4h5XKc1c" \
-  -H "Content-Type: application/json"
+{"success":true,"data":{"kyc":{"hasConnectAccount":true,"connectAccountId":"acct_1Rchm83dM0E4s9VI","status":"verified","canReceivePayments":true,"requiresOnboarding":false,"message":"Compte vérifié, vous pouvez recevoir des paiements","nextAction":"none","createdAt":"2025-06-22T06:53:15.493Z","verifiedAt":"2025-06-22T06:55:56.821Z","lastChecked":"2025-06-22T06:55:56.821Z","stripe":{"chargesEnabled":false,"payoutsEnabled":false,"detailsSubmitted":false}},"balance":{"available":[{"amount":0,"currency":"eur","source_types":{"card":0}}],"pending":[{"amount":20925,"currency":"eur","source_types":{"card":20925}}],"totalAvailable":0,"totalPending":209.25},"payouts":[],"summary":{"hasStripeAccount":true,"isVerified":true,"canReceivePayments":true,"canReceivePayouts":false,"availableBalance":0,"pendingBalance":209.25}}}                                                                                                                                                                        
+┌──(franck㉿f504)-[~]
+└─$ 
 
-{"success":true,"data":{"kyc":{"hasConnectAccount":true,"connectAccountId":"acct_1RcdkG4CQCv9UG1T","status":"verified","canReceivePayments":true,"requiresOnboarding":false,"message":"Compte vérifié, vous pouvez recevoir des paiements","nextAction":"none","createdAt":"2025-06-22T02:35:04.193Z","verifiedAt":"2025-06-22T02:37:41.562Z","lastChecked":"2025-06-22T02:38:37.988Z","stripe":{"chargesEnabled":false,"payoutsEnabled":false,"detailsSubmitted":false}},"balance":{"available":[{"amount":0,"currency":"eur","source_types":{"card":0}}],"pending":[{"amount":20700,"currency":"eur","source_types":{"card":20700}}],"totalAvailable":0,"totalPending":207},"payouts":[],"summary":{"hasStripeAccount":true,"isVerified":true,"canReceivePayments":true,"canReceivePayouts":false,"availableBalance":0,"pendingBalance":207}}}

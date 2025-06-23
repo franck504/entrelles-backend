@@ -347,9 +347,88 @@ const getDriverFinancialStatus = async (req, res) => {
   }
 };
 
+// ✅ AJOUTER CETTE FONCTION dans paymentController.js
+
+const createCheckoutSession = async (req, res) => {
+  try {
+    const { priceId } = req.body;
+    const userId = req.user.id;
+    
+    console.log('🛒 Creating checkout session for user:', userId);
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    if (user.subscription?.isActive) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Already subscribed' 
+      });
+    }
+
+    // 1️⃣ Créer/récupérer customer
+    let customerId = user.stripe?.customerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.profile.displayName,
+        metadata: { userId: userId.toString() }
+      });
+      customerId = customer.id;
+      await User.findByIdAndUpdate(userId, { 
+        'stripe.customerId': customerId 
+      });
+    }
+
+    // 2️⃣ Créer session checkout
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      customer: customerId,
+      line_items: [{
+        price: priceId,
+        quantity: 1,
+      }],
+      success_url: 'entrelles://payment-success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'entrelles://payment-cancel',
+      metadata: {
+        userId: userId.toString(),
+        plan: 'premium'
+      },
+      subscription_data: {
+        metadata: {
+          userId: userId.toString(),
+          plan: 'premium'
+        }
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Checkout session created',
+      url: session.url,
+      sessionId: session.id
+    });
+
+  } catch (error) {
+    console.error('❌ Checkout session error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating checkout session',
+      error: error.message
+    });
+  }
+};
+
 // ✅ EXPORTS FINAUX
 module.exports = {
   createAndActivateSubscription,
+  createCheckoutSession, // ✅ NOUVEAU
   getSubscriptionStatus,
   createTripPayment,
   finalizeTripPayment,
