@@ -168,7 +168,7 @@ const handleStripeWebhook = async (req, res) => {
     }
 };
 
-// ✅ AJOUTER CETTE FONCTION dans webhooks.js
+// ✅ CORRIGER CETTE FONCTION dans webhooks.js
 const handleCheckoutSessionCompleted = async (session) => {
   try {
     console.log('🛒 Checkout session completed:', session.id);
@@ -185,41 +185,66 @@ const handleCheckoutSessionCompleted = async (session) => {
       return;
     }
 
-    // Récupérer l'abonnement Stripe
+    console.log('👤 Processing subscription for user:', userId);
+
+    // ✅ RÉCUPÉRER L'ABONNEMENT STRIPE COMPLET
     const subscriptionId = session.subscription;
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     
-    console.log('📋 Subscription details:', {
+    console.log('📋 Subscription retrieved:', {
       id: subscription.id,
       status: subscription.status,
-      userId: userId
+      current_period_start: subscription.current_period_start,
+      current_period_end: subscription.current_period_end
     });
 
-    // ✅ METTRE À JOUR LA BASE DE DONNÉES (même logique que /subscribe)
+    // ✅ MISE À JOUR IDENTIQUE À /subscribe
     const updatedUser = await User.findByIdAndUpdate(userId, {
+      // Stripe IDs
       'subscription.stripeSubscriptionId': subscription.id,
       'subscription.stripeCustomerId': session.customer,
+      
+      // Statut (EXACTEMENT comme /subscribe)
       'subscription.status': subscription.status,
       'subscription.plan': 'premium',
       'subscription.isActive': subscription.status === 'active',
+      
+      // Dates (EXACTEMENT comme /subscribe)
       'subscription.currentPeriodStart': new Date(subscription.current_period_start * 1000),
       'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
-      'subscription.activatedAt': new Date()
-    }, { new: true });
+      
+      // Tracking
+      'subscription.activatedAt': new Date(),
+      'subscription.activatedVia': 'checkout'
+    }, { 
+      new: true,
+      runValidators: true 
+    });
 
     if (updatedUser) {
       console.log('✅ User subscription activated via checkout:', {
         userId: userId,
         email: updatedUser.email,
         plan: updatedUser.subscription.plan,
-        isActive: updatedUser.subscription.isActive
+        isActive: updatedUser.subscription.isActive,
+        status: updatedUser.subscription.status,
+        stripeSubscriptionId: updatedUser.subscription.stripeSubscriptionId
       });
+      
+      // ✅ VÉRIFICATION FINALE
+      console.log('🔍 Final subscription state:', {
+        isActive: updatedUser.subscription.isActive,
+        plan: updatedUser.subscription.plan,
+        status: updatedUser.subscription.status
+      });
+      
     } else {
-      console.error('❌ User not found:', userId);
+      console.error('❌ User not found for ID:', userId);
     }
 
   } catch (error) {
     console.error('❌ Error processing checkout completion:', error);
+    console.error('Stack trace:', error.stack);
   }
 };
 
