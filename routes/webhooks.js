@@ -15,6 +15,10 @@ const handleStripeWebhook = async (req, res) => {
     try {
         event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
         console.log('✅ Webhook signature verified:', event.type);
+        
+        // ✅ AJOUTER CES LOGS
+        console.log('📋 Event data:', JSON.stringify(event.data.object, null, 2));
+        
     } catch (err) {
         console.error('❌ Webhook signature verification failed:', err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -172,6 +176,12 @@ const handleStripeWebhook = async (req, res) => {
 const handleCheckoutSessionCompleted = async (session) => {
   try {
     console.log('🛒 Checkout session completed:', session.id);
+    console.log('📋 Session details:', {
+      mode: session.mode,
+      payment_status: session.payment_status,
+      subscription: session.subscription,
+      metadata: session.metadata
+    });
     
     // Vérifier que c'est un abonnement
     if (session.mode !== 'subscription') {
@@ -179,9 +189,16 @@ const handleCheckoutSessionCompleted = async (session) => {
       return;
     }
 
+    // Vérifier que le paiement est réussi
+    if (session.payment_status !== 'paid') {
+      console.log('⚠️ Payment not completed, status:', session.payment_status);
+      return;
+    }
+
     const userId = session.metadata.userId;
     if (!userId) {
       console.log('⚠️ No userId in session metadata');
+      console.log('Available metadata:', session.metadata);
       return;
     }
 
@@ -189,6 +206,11 @@ const handleCheckoutSessionCompleted = async (session) => {
 
     // ✅ RÉCUPÉRER L'ABONNEMENT STRIPE COMPLET
     const subscriptionId = session.subscription;
+    if (!subscriptionId) {
+      console.log('⚠️ No subscription ID in session');
+      return;
+    }
+
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     
     console.log('📋 Subscription retrieved:', {
@@ -199,7 +221,7 @@ const handleCheckoutSessionCompleted = async (session) => {
     });
 
     // ✅ MISE À JOUR IDENTIQUE À /subscribe
-    const updatedUser = await User.findByIdAndUpdate(userId, {
+    const updateData = {
       // Stripe IDs
       'subscription.stripeSubscriptionId': subscription.id,
       'subscription.stripeCustomerId': session.customer,
@@ -216,7 +238,11 @@ const handleCheckoutSessionCompleted = async (session) => {
       // Tracking
       'subscription.activatedAt': new Date(),
       'subscription.activatedVia': 'checkout'
-    }, { 
+    };
+
+    console.log('💾 Updating user with data:', updateData);
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { 
       new: true,
       runValidators: true 
     });
