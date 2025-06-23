@@ -703,3 +703,6 @@
 5. **PAIEMENT** : Utiliser Stripe SDK Flutter avec `clientSecret`
 
 **Cette documentation est complète et testée ! 🎯**
+
+
+webhooks key corriged
