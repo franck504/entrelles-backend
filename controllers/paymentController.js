@@ -355,19 +355,19 @@ const createCheckoutSession = async (req, res) => {
     const userId = req.user.id;
     
     console.log('🛒 Creating checkout session for user:', userId);
-    
+
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
       });
     }
 
     if (user.subscription?.isActive) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Already subscribed' 
+      return res.status(400).json({
+        success: false,
+        message: 'Already subscribed'
       });
     }
 
@@ -380,8 +380,8 @@ const createCheckoutSession = async (req, res) => {
         metadata: { userId: userId.toString() }
       });
       customerId = customer.id;
-      await User.findByIdAndUpdate(userId, { 
-        'stripe.customerId': customerId 
+      await User.findByIdAndUpdate(userId, {
+        'stripe.customerId': customerId
       });
     }
 
@@ -394,33 +394,87 @@ const createCheckoutSession = async (req, res) => {
         price: priceId,
         quantity: 1,
       }],
-      success_url: 'entrelles://payment-success?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'entrelles://payment-cancel',
+      // ✅ URLs DE REDIRECTION AMÉLIORÉES
+      success_url: 'entrelles://payment-success?session_id={CHECKOUT_SESSION_ID}&status=success&user_id=' + userId,
+      cancel_url: 'entrelles://payment-cancel?session_id={CHECKOUT_SESSION_ID}&status=cancel&user_id=' + userId,
+      
+      // ✅ CONFIGURATION AVANCÉE
+      allow_promotion_codes: true,
+      billing_address_collection: 'auto',
+      customer_update: {
+        address: 'auto',
+        name: 'auto'
+      },
+      
       metadata: {
         userId: userId.toString(),
-        plan: 'premium'
+        plan: 'premium',
+        // ✅ AJOUTER TIMESTAMP POUR DEBUG
+        created_at: new Date().toISOString()
       },
+      
       subscription_data: {
         metadata: {
           userId: userId.toString(),
-          plan: 'premium'
-        }
+          plan: 'premium',
+          created_at: new Date().toISOString()
+        },
+        // ✅ PÉRIODE D'ESSAI OPTIONNELLE (7 jours)
+        // trial_period_days: 7,
+      },
+
+      // ✅ CONFIGURATION EXPIRATION
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 60), // 30 minutes
+    });
+
+    // ✅ SAUVEGARDER LA SESSION POUR TRACKING
+    await User.findByIdAndUpdate(userId, {
+      'stripe.lastCheckoutSession': {
+        sessionId: session.id,
+        url: session.url,
+        createdAt: new Date(),
+        status: 'pending'
       }
+    });
+
+    console.log('✅ Checkout session created:', {
+      sessionId: session.id,
+      customerId: customerId,
+      userId: userId
     });
 
     res.status(201).json({
       success: true,
       message: 'Checkout session created',
       url: session.url,
-      sessionId: session.id
+      sessionId: session.id,
+      // ✅ INFOS SUPPLÉMENTAIRES POUR DEBUG
+      expiresAt: session.expires_at,
+      customerId: customerId
     });
 
   } catch (error) {
     console.error('❌ Checkout session error:', error);
-    res.status(500).json({
+    
+    // ✅ GESTION D'ERREUR AMÉLIORÉE
+    let errorMessage = 'Error creating checkout session';
+    let statusCode = 500;
+
+    if (error.type === 'StripeCardError') {
+      errorMessage = 'Erreur de carte bancaire';
+      statusCode = 400;
+    } else if (error.type === 'StripeInvalidRequestError') {
+      errorMessage = 'Requête invalide vers Stripe';
+      statusCode = 400;
+    } else if (error.type === 'StripeAPIError') {
+      errorMessage = 'Erreur API Stripe temporaire';
+      statusCode = 502;
+    }
+
+    res.status(statusCode).json({
       success: false,
-      message: 'Error creating checkout session',
-      error: error.message
+      message: errorMessage,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
