@@ -394,11 +394,9 @@ const createCheckoutSession = async (req, res) => {
         price: priceId,
         quantity: 1,
       }],
-      // ✅ URLs DE REDIRECTION AMÉLIORÉES
       success_url: 'entrelles://payment-success?session_id={CHECKOUT_SESSION_ID}&status=success&user_id=' + userId,
       cancel_url: 'entrelles://payment-cancel?session_id={CHECKOUT_SESSION_ID}&status=cancel&user_id=' + userId,
       
-      // ✅ CONFIGURATION AVANCÉE
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
       customer_update: {
@@ -407,23 +405,19 @@ const createCheckoutSession = async (req, res) => {
       },
       
       metadata: {
-        userId: userId.toString(),
+        userId: userId.toString(), // ✅ CRUCIAL POUR LE WEBHOOK
         plan: 'premium',
-        // ✅ AJOUTER TIMESTAMP POUR DEBUG
         created_at: new Date().toISOString()
       },
       
       subscription_data: {
         metadata: {
-          userId: userId.toString(),
+          userId: userId.toString(), // ✅ CRUCIAL POUR LE WEBHOOK
           plan: 'premium',
           created_at: new Date().toISOString()
         },
-        // ✅ PÉRIODE D'ESSAI OPTIONNELLE (7 jours)
-        // trial_period_days: 7,
       },
 
-      // ✅ CONFIGURATION EXPIRATION
       expires_at: Math.floor(Date.now() / 1000) + (30 * 60), // 30 minutes
     });
 
@@ -437,18 +431,11 @@ const createCheckoutSession = async (req, res) => {
       }
     });
 
-    console.log('✅ Checkout session created:', {
-      sessionId: session.id,
-      customerId: customerId,
-      userId: userId
-    });
-
     res.status(201).json({
       success: true,
       message: 'Checkout session created',
       url: session.url,
       sessionId: session.id,
-      // ✅ INFOS SUPPLÉMENTAIRES POUR DEBUG
       expiresAt: session.expires_at,
       customerId: customerId
     });
@@ -456,7 +443,6 @@ const createCheckoutSession = async (req, res) => {
   } catch (error) {
     console.error('❌ Checkout session error:', error);
     
-    // ✅ GESTION D'ERREUR AMÉLIORÉE
     let errorMessage = 'Error creating checkout session';
     let statusCode = 500;
 

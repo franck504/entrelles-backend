@@ -75,6 +75,11 @@ const handleStripeWebhook = async (req, res) => {
             case 'refund.updated':
                 await handleRefundUpdated(event.data.object);
                 break;
+            // ✅ AJOUTER CE CASE dans le switch de handleStripeWebhook
+            case 'checkout.session.completed':
+                await handleCheckoutSessionCompleted(event.data.object);
+                break;
+
 
             // 📋 === ABONNEMENTS ===
             case 'customer.subscription.created':
@@ -161,6 +166,61 @@ const handleStripeWebhook = async (req, res) => {
         console.error('❌ Webhook processing error:', error);
         res.status(500).json({ error: 'Webhook processing failed' });
     }
+};
+
+// ✅ AJOUTER CETTE FONCTION dans webhooks.js
+const handleCheckoutSessionCompleted = async (session) => {
+  try {
+    console.log('🛒 Checkout session completed:', session.id);
+    
+    // Vérifier que c'est un abonnement
+    if (session.mode !== 'subscription') {
+      console.log('⚠️ Not a subscription checkout, skipping');
+      return;
+    }
+
+    const userId = session.metadata.userId;
+    if (!userId) {
+      console.log('⚠️ No userId in session metadata');
+      return;
+    }
+
+    // Récupérer l'abonnement Stripe
+    const subscriptionId = session.subscription;
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    
+    console.log('📋 Subscription details:', {
+      id: subscription.id,
+      status: subscription.status,
+      userId: userId
+    });
+
+    // ✅ METTRE À JOUR LA BASE DE DONNÉES (même logique que /subscribe)
+    const updatedUser = await User.findByIdAndUpdate(userId, {
+      'subscription.stripeSubscriptionId': subscription.id,
+      'subscription.stripeCustomerId': session.customer,
+      'subscription.status': subscription.status,
+      'subscription.plan': 'premium',
+      'subscription.isActive': subscription.status === 'active',
+      'subscription.currentPeriodStart': new Date(subscription.current_period_start * 1000),
+      'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
+      'subscription.activatedAt': new Date()
+    }, { new: true });
+
+    if (updatedUser) {
+      console.log('✅ User subscription activated via checkout:', {
+        userId: userId,
+        email: updatedUser.email,
+        plan: updatedUser.subscription.plan,
+        isActive: updatedUser.subscription.isActive
+      });
+    } else {
+      console.error('❌ User not found:', userId);
+    }
+
+  } catch (error) {
+    console.error('❌ Error processing checkout completion:', error);
+  }
 };
 
 // 💳 === FONCTIONS PAIEMENTS TRAJETS ===
