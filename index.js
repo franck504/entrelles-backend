@@ -47,7 +47,7 @@ app.use(cookieParser());
 // Routes de base
 app.get('/', (req, res) => {
   res.json({
-    message: '🚗 Entrelles API - Covoiturage féminin',
+    message: '🚗 Entrelles API - Covoiturage féminin 😁😁😁😁😁😁',
     version: '1.0.0',
     status: 'active',
     timestamp: new Date().toISOString(),
