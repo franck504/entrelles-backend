@@ -347,7 +347,117 @@ const getDriverFinancialStatus = async (req, res) => {
   }
 };
 
-// ✅ AJOUTER CETTE FONCTION dans paymentController.js
+// ✅ CRÉER CHECKOUT SESSION POUR PAIEMENT TRAJET
+const createTripCheckoutSession = async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+    const userId = req.user.id;
+
+    console.log('🛒 Creating trip checkout session for booking:', bookingId);
+
+    const booking = await Booking.findById(bookingId)
+      .populate('trip', 'distance departure arrival departureDateTime driver')
+      .populate('passenger', 'email profile.displayName stripe.customerId')
+      .populate('driver', 'profile.displayName email kyc stripe.connectAccountId');
+
+    if (!booking || booking.passenger._id.toString() !== userId.toString()) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Calcul montants identique au paiement direct
+    const distance = booking.trip.distance || 100;
+    const seats = booking.numberOfSeats;
+    const driverAmountEur = distance * seats * 0.45;
+    const commissionAmountEur = distance * seats * 0.10;
+    const totalAmountEur = driverAmountEur + commissionAmountEur;
+
+    const driverAmount = Math.round(driverAmountEur * 100);
+    const commissionAmount = Math.round(commissionAmountEur * 100);
+    const totalAmount = Math.round(totalAmountEur * 100);
+
+    // Créer/récupérer customer Stripe pour la passagère
+    let customerId = booking.passenger.stripe?.customerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: booking.passenger.email,
+        name: booking.passenger.profile.displayName,
+        metadata: { userId: userId.toString() }
+      });
+      customerId = customer.id;
+      await User.findByIdAndUpdate(booking.passenger._id, { 'stripe.customerId': customerId });
+    }
+
+    // Vérifier KYC conductrice
+    const driverKycStatus = booking.driver.getKycStatus ? booking.driver.getKycStatus() : { canReceivePayments: false };
+    const driverConnectAccountId = driverKycStatus.connectAccountId || booking.driver.stripe?.connectAccountId;
+    const canCreateTransfer = driverKycStatus.canReceivePayments && driverConnectAccountId;
+
+    // Créer Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      customer: customerId,
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: `Trajet ${booking.trip.departure.city} → ${booking.trip.arrival.city}`,
+          },
+          unit_amount: totalAmount,
+        },
+        quantity: 1,
+      }],
+      payment_intent_data: {
+        transfer_data: canCreateTransfer ? {
+          destination: driverConnectAccountId,
+          amount: driverAmount
+        } : undefined,
+        metadata: {
+          bookingId: bookingId.toString(),
+          type: 'trip_payment',
+          holdForKyc: canCreateTransfer ? 'false' : 'true'
+        }
+      },
+      success_url: 'entrelles://trip-payment-success?session_id={CHECKOUT_SESSION_ID}&booking_id=' + bookingId + '&status=success',
+      cancel_url: 'entrelles://trip-payment-cancel?session_id={CHECKOUT_SESSION_ID}&booking_id=' + bookingId + '&status=cancel',
+      metadata: {
+        bookingId: bookingId.toString(),
+        type: 'trip_payment',
+        created_at: new Date().toISOString()
+      },
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 60) // 30 min
+    });
+
+    // Sauvegarder la session dans le booking
+    booking.payment = {
+      stripeCheckoutSessionId: session.id,
+      url: session.url,
+      amount: totalAmount,
+      currency: 'eur',
+      status: 'pending',
+      driverAmount: driverAmount,
+      commissionAmount: commissionAmount
+    };
+    await booking.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Checkout session created',
+      url: session.url,
+      sessionId: session.id,
+      expiresAt: session.expires_at,
+      breakdown: {
+        totalEur: totalAmountEur,
+        driverEur: driverAmountEur,
+        commissionEur: commissionAmountEur
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Trip checkout session error:', error);
+    res.status(500).json({ success: false, message: 'Error creating trip checkout session', error: error.message });
+  }
+};
 
 const createCheckoutSession = async (req, res) => {
   try {
@@ -468,9 +578,10 @@ const createCheckoutSession = async (req, res) => {
 // ✅ EXPORTS FINAUX
 module.exports = {
   createAndActivateSubscription,
-  createCheckoutSession, // ✅ NOUVEAU
+  createCheckoutSession,
   getSubscriptionStatus,
   createTripPayment,
+  createTripCheckoutSession,
   finalizeTripPayment,
   getDriverFinancialStatus
 };
