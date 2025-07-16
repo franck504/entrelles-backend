@@ -53,7 +53,7 @@ const tripSchema = new mongoose.Schema({
   availableSeats: {
     type: Number,
     default: 1,
-    min: 1,
+    min: 0, // allow 0 seats when trip is full
     max: 7
   },
   totalSeats: {
