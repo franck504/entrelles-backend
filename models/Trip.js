@@ -58,7 +58,7 @@ const tripSchema = new mongoose.Schema({
   },
   totalSeats: {
     type: Number,
-    default: 4,
+    default: 1,   // modified 16 juillet 16:50
     min: 1,
     max: 8
   },
@@ -68,7 +68,7 @@ const tripSchema = new mongoose.Schema({
   },
   distance: {
     type: Number,
-    default: 100 // ✅ DEFAULT au lieu de validation stricte
+    default: 3 // ✅ DEFAULT au lieu de validation stricte
   },
   vehicle: {
     brand: String,
