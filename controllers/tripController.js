@@ -45,12 +45,22 @@ const createTrip = async (req, res) => {
     
     console.log('✅ KYC vérifié, création du trajet autorisée');
 
-    // ✅ NOUVEAU : Calcul automatique du prix basé sur la distance
-    if (req.body.distance && !req.body.pricePerSeat) {
-      const exactPrice = req.body.distance * 0.55;
-      req.body.pricePerSeat = Math.ceil(exactPrice * 100) / 100; // Arrondir vers le haut
-      console.log(`💰 Prix calculé automatiquement: ${req.body.pricePerSeat}€ (${req.body.distance}km × 0.55€)`);
+    // Vérifier que la distance est fournie
+    if (!req.body.distance) {
+      return res.status(400).json({
+        success: false,
+        message: 'La distance est obligatoire pour créer un trajet',
+        field: 'distance'
+      });
     }
+
+    // Calcul automatique du prix basé sur la distance (0.55€/km)
+    const exactPrice = req.body.distance * 0.55;
+    const calculatedPrice = Math.ceil(exactPrice * 100) / 100; // Arrondir vers le haut
+    
+    // Toujours utiliser le prix calculé, même si un prix a été fourni
+    req.body.pricePerSeat = calculatedPrice;
+    console.log(`💰 Prix calculé automatiquement: ${calculatedPrice}€ (${req.body.distance}km × 0.55€)`);
 
     // Les données sont déjà enrichies par le middleware
     const tripData = {
