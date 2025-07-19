@@ -63,14 +63,14 @@ const createTrip = async (req, res) => {
       });
     }
 
-    // Calcul du prix selon la formule : 0.55 * nombre de places * distance
-    const pricePerKmPerSeat = 0.55;
-    const exactPrice = pricePerKmPerSeat * req.body.totalSeats * req.body.distance;
-    const calculatedPrice = Math.ceil(exactPrice * 100) / 100; // Arrondir au centime supérieur
+    // Calcul du prix unitaire par place selon la formule : 0.55 * distance
+    const pricePerKm = 0.55; // Prix par kilomètre par place
+    const exactPricePerSeat = pricePerKm * req.body.distance;
+    const pricePerSeat = Math.ceil(exactPricePerSeat * 100) / 100; // Arrondir au centime supérieur
     
-    // Forcer l'utilisation du prix calculé
-    req.body.pricePerSeat = calculatedPrice;
-    console.log(`💰 Prix calculé: ${calculatedPrice}€ (${req.body.distance}km × ${req.body.totalSeats} places × ${pricePerKmPerSeat}€/km/place)`);
+    // Définir le prix unitaire par place
+    req.body.pricePerSeat = pricePerSeat;
+    console.log(`💰 Prix unitaire calculé: ${pricePerSeat}€/place (${req.body.distance}km × ${pricePerKm}€/km)`);
 
     // Les données sont déjà enrichies par le middleware
     const tripData = {
