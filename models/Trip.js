@@ -128,7 +128,7 @@ const tripSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'completed', 'cancelled', 'full'],
+    enum: ['active', 'completed', 'cancelled'],
     default: 'active'
   },
   isRecurring: {

@@ -244,9 +244,6 @@ const confirmBooking = async (req, res) => {
     const trip = await Trip.findById(booking.trip._id);
     if (trip) {
       trip.availableSeats = Math.max(0, trip.availableSeats - booking.numberOfSeats);
-      if (trip.availableSeats === 0) {
-        trip.status = 'full';
-      }
       await trip.save();
     }
 
