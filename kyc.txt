@@ -26,3 +26,4 @@ Si vous souhaitez des informations plus détaillées sur la mise en œuvre techn
 
 [1]: https://www.reddit.com/r/stripe/comments/ozv2s1?utm_source=chatgpt.com "I'm setting up Stripe Connect for the first time. It seems to require users to create their own Stripe accounts to receive payouts. Websites like Gumroad only require people to enter their credit card info to receive payouts. Is there a way to accomplish this with stripe?"
 [2]: https://support.poparide.com/en/articles/11028266-bank-account-verification-with-stripe?utm_source=chatgpt.com "Bank account verification with Stripe | Poparide Help Centre"
+je veux declencher un build
