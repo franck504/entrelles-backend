@@ -3,13 +3,15 @@ const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 const { protect } = require('../middleware/authMiddleware');
 
-// ✅ ROUTES PRINCIPALES SEULEMENT
-router.post('/subscribe', protect, paymentController.createAndActivateSubscription);
+// ✅ ROUTES PRODUCTION - Stripe Checkout Uniquement
+// Abonnement Premium
 router.post('/create-checkout', protect, paymentController.createCheckoutSession);
 router.get('/subscription-status', protect, paymentController.getSubscriptionStatus);
+
+// Paiement Trajets
 router.post('/create-trip-checkout', protect, paymentController.createTripCheckoutSession);
-router.post('/create-trip-payment', protect, paymentController.createTripPayment);
-router.post('/finalize-trip-payment', protect, paymentController.finalizeTripPayment);
+
+// Statut Financier Conductrice
 router.get('/driver/financial-status', protect, paymentController.getDriverFinancialStatus);
 
 module.exports = router;
