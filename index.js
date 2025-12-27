@@ -93,7 +93,7 @@ app.get('/test-db', async (req, res) => {
   try {
     const mongoose = require('mongoose');
     const dbState = mongoose.connection.readyState;
-    
+
     const states = {
       0: 'disconnected',
       1: 'connected',
@@ -110,36 +110,6 @@ app.get('/test-db', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: 'Database test failed',
-      error: error.message
-    });
-  }
-});
-
-// ✅ NOUVEAU : Test Stripe
-app.get('/test-stripe', async (req, res) => {
-  try {
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    
-    // Test simple : créer un PaymentIntent de test
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: 1000, // 10€
-      currency: 'eur',
-      metadata: { test: 'true' }
-    });
-
-    res.json({
-      message: 'Stripe connection test',
-      status: 'OK',
-      paymentIntent: {
-        id: paymentIntent.id,
-        amount: paymentIntent.amount,
-        currency: paymentIntent.currency,
-        status: paymentIntent.status
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: 'Stripe test failed',
       error: error.message
     });
   }
