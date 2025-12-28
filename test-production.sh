@@ -12,7 +12,7 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "\n${YELLOW}2️⃣  Inscription${NC}"
+echo -e "\n${YELLOW}1️⃣  Inscription${NC}"
 EMAIL="test.$(date +%s)@entrelles.com"
 register=$(curl -s -X POST $BASE_URL/api/auth/register \
   -H "Content-Type: application/json" \
@@ -34,7 +34,7 @@ else
   echo -e "${GREEN}✅ Utilisateur créé ($EMAIL)${NC}"
 fi
 
-echo -e "\n${YELLOW}3️⃣  Création Checkout${NC}"
+echo -e "\n${YELLOW}2️⃣  Création Checkout${NC}"
 checkout=$(curl -s -X POST $BASE_URL/api/payments/create-checkout \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \

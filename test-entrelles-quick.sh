@@ -1,7 +1,7 @@
 #!/bin/bash
-# test-entrelles-quick.sh - Test Rapide Backend Entrelles
+# test-entrelles-quick.sh
 
-BASE_URL="http://localhost:3000"
+BASE_URL="https://entrelles-backend.vercel.app"
 PRICE_ID="price_1Siw47JN9J8u3xFmmDBUOLIJ"
 
 echo "🧪 Test Rapide Backend Entrelles"

@@ -123,6 +123,15 @@ const createTripCheckoutSession = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
+    // ✅ SÉCURITÉ : Bloquer le paiement si la réservation n'est pas confirmée par la conductrice
+    if (booking.status !== 'confirmed') {
+      return res.status(400).json({
+        success: false,
+        message: 'La réservation doit être confirmée par la conductrice avant de pouvoir procéder au paiement.',
+        currentStatus: booking.status
+      });
+    }
+
     // Calcul montants identique au paiement direct
     const distance = booking.trip.distance || 100;
     const seats = booking.numberOfSeats;
