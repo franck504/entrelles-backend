@@ -367,7 +367,11 @@ const updateProfile = async (req, res) => {
           Object.keys(req.body[field]).forEach(addressField => {
             fieldsToUpdate[`profile.address.${addressField}`] = req.body[field][addressField];
           });
+        } else if (field === 'profileImageUrl' || field === 'vehicleImageUrl') {
+          // Ces champs sont déjà dans le schéma profile
+          fieldsToUpdate[`profile.${field}`] = req.body[field];
         } else {
+          // Pour displayName, firstName, lastName, phone, bio
           fieldsToUpdate[`profile.${field}`] = req.body[field];
         }
       }
