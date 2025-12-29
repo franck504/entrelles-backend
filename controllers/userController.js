@@ -395,10 +395,15 @@ const uploadUserImage = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(`❌ Erreur upload image:`, error);
+    console.error(`❌ Erreur upload image détaillée:`, error);
+
+    // Si l'erreur vient de Cloudinary, elle contient souvent des infos utiles
+    const errorMessage = error.message || 'Erreur lors de l\'upload de l\'image';
+
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de l\'upload de l\'image'
+      message: errorMessage,
+      debug: process.env.NODE_ENV === 'development' ? error : undefined
     });
   }
 };
