@@ -87,10 +87,10 @@ trip=$(curl -s -X POST $BASE_URL/api/trips \
       "address": "Gare Part-Dieu, Lyon",
       "coordinates": { "lat": 45.7603, "lng": 4.8598 }
     },
-    "departureDateTime": "2026-01-25T14:00:00Z",
-    "totalSeats": 3,
-    "availableSeats": 3,
-    "distance": 465,
+    "departureDateTime": "2026-01-06T14:00:00Z",
+    "totalSeats": 6,
+    "availableSeats": 5,
+    "distance": 200,
     "vehicleInfo": {
       "make": "Renault",
       "model": "Clio",
@@ -104,7 +104,7 @@ trip=$(curl -s -X POST $BASE_URL/api/trips \
       "musicPreference": "low",
       "chatLevel": "quiet"
     },
-    "description": "Trajet direct Paris-Lyon, départ gare de Lyon"
+    "description": "Milay be , Trajet direct Paris-Lyon, départ gare de Lyon"
   }')
 
 TRIP_ID=$(echo $trip | jq -r '.trip.id')

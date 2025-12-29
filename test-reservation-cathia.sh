@@ -122,7 +122,7 @@ fi
 
 TRIP_ID=$(echo $trips | jq -r '.trips[0]._id')
 PRICE=$(echo $trips | jq -r '.trips[0].pricePerSeat')
-DRIVER=$(echo $trips | jq -r '.trips[0].driver.displayName')
+DRIVER=$(echo $trips | jq -r '.trips[0].driver.profile.displayName')
 SEATS=$(echo $trips | jq -r '.trips[0].availableSeats')
 
 echo -e "${GREEN}✅ Trajet trouvé${NC}"
@@ -143,7 +143,7 @@ booking=$(curl -s -X POST $BASE_URL/api/bookings \
     \"message\": \"Bonjour ! Je souhaite réserver une place pour Lyon. Merci !\"
   }")
 
-BOOKING_ID=$(echo $booking | jq -r '.booking._id')
+BOOKING_ID=$(echo $booking | jq -r '.booking.id')
 TOTAL_PRICE=$(echo $booking | jq -r '.booking.totalPrice')
 BOOKING_STATUS=$(echo $booking | jq -r '.booking.status')
 BOOKING_SUCCESS=$(echo $booking | jq -r '.success')
