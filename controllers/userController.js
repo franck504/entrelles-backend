@@ -32,7 +32,7 @@ const upload = multer({
 const getPublicProfile = async (req, res) => {
   try {
     console.log('🔍 Récupération profil public pour ID:', req.params.id);
-    
+
     const user = await User.findById(req.params.id)
       .select('-password -security -stripe -kyc -bankingInfo -metadata.ipAddress -metadata.userAgent');
 
@@ -86,7 +86,7 @@ const getPublicProfile = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Erreur récupération profil public:', error);
-    
+
     if (error.name === 'CastError') {
       return res.status(404).json({
         success: false,
@@ -108,7 +108,7 @@ const uploadAvatar = async (req, res) => {
   try {
     console.log('🔍 Upload avatar - User ID:', req.user?.id);
     console.log('🔍 Fichier reçu:', req.file ? 'OUI' : 'NON');
-    
+
     if (req.file) {
       console.log('🔍 Détails fichier:', {
         originalname: req.file.originalname,
@@ -148,7 +148,7 @@ const uploadAvatar = async (req, res) => {
           }
         }
       );
-      
+
       uploadStream.end(req.file.buffer);
     });
 
@@ -190,7 +190,7 @@ const uploadAvatar = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Erreur upload avatar:', error);
-    
+
     if (error.message && error.message.includes('File size')) {
       return res.status(400).json({
         success: false,
@@ -219,15 +219,15 @@ const updateCompleteProfile = async (req, res) => {
   try {
     console.log('🔍 Mise à jour profil pour user:', req.user.id);
     console.log('🔍 Données reçues:', req.body);
-    
+
     const fieldsToUpdate = {};
-    
+
     // Champs profil autorisés
     const allowedProfileFields = [
-      'displayName', 'firstName', 'lastName', 'phone', 'bio', 
-      'dateOfBirth', 'address'
+      'displayName', 'firstName', 'lastName', 'phone', 'bio',
+      'dateOfBirth', 'address', 'profileImageUrl', 'vehicleImageUrl'
     ];
-    
+
     // Mettre à jour les champs profil
     allowedProfileFields.forEach(field => {
       if (req.body[field] !== undefined) {
@@ -245,10 +245,10 @@ const updateCompleteProfile = async (req, res) => {
     // Mettre à jour les préférences si fournies
     if (req.body.preferences && typeof req.body.preferences === 'object') {
       const allowedPreferences = [
-        'allowSmoking', 'allowPets', 'allowFood', 'musicPreference', 
+        'allowSmoking', 'allowPets', 'allowFood', 'musicPreference',
         'chatLevel', 'maxDetour', 'autoAcceptBookings'
       ];
-      
+
       allowedPreferences.forEach(pref => {
         if (req.body.preferences[pref] !== undefined) {
           fieldsToUpdate[`preferences.${pref}`] = req.body.preferences[pref];
@@ -300,7 +300,7 @@ const updateCompleteProfile = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Erreur mise à jour profil:', error);
-    
+
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => ({
         field: err.path,
@@ -321,9 +321,83 @@ const updateCompleteProfile = async (req, res) => {
   }
 };
 
+// @desc    Upload image utilisateur (profil ou véhicule)
+// @route   POST /api/users/upload-image
+// @access  Private
+const uploadUserImage = async (req, res) => {
+  try {
+    const { type } = req.body; // 'profile' or 'vehicle'
+
+    if (!['profile', 'vehicle'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Type d\'image invalide (doit être "profile" ou "vehicle")'
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucune image fournie'
+      });
+    }
+
+    const folder = type === 'profile' ? 'entrelles/profile_images' : 'entrelles/vehicle_images';
+    const field = type === 'profile' ? 'profile.profileImageUrl' : 'profile.vehicleImageUrl';
+
+    // Upload vers Cloudinary
+    const uploadResult = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: folder,
+          public_id: `${type}_${req.user.id}_${Date.now()}`,
+          transformation: [
+            { width: 800, height: 600, crop: 'limit' },
+            { quality: 'auto', fetch_format: 'auto' }
+          ],
+          overwrite: true
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      uploadStream.end(req.file.buffer);
+    });
+
+    // Mettre à jour la base de données
+    const updateData = {};
+    updateData[field] = uploadResult.secure_url;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      updateData,
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Image de ${type === 'profile' ? 'profil' : 'véhicule'} mise à jour`,
+      imageUrl: uploadResult.secure_url,
+      user: {
+        id: user._id,
+        profile: user.profile
+      }
+    });
+
+  } catch (error) {
+    console.error(`❌ Erreur upload image:`, error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'upload de l\'image'
+    });
+  }
+};
+
 module.exports = {
   getPublicProfile,
   uploadAvatar,
   updateCompleteProfile,
+  uploadUserImage,
   upload
 };

@@ -45,6 +45,14 @@ const userSchema = new mongoose.Schema({
       type: String,
       default: ''
     },
+    profileImageUrl: {
+      type: String,
+      default: ''
+    },
+    vehicleImageUrl: {
+      type: String,
+      default: ''
+    },
     bio: {
       type: String,
       maxlength: [500, 'Bio cannot exceed 500 characters']
@@ -298,32 +306,32 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-userSchema.methods.hasActiveSubscription = function() {
-  return this.subscription.status === 'active' && 
-         this.subscription.currentPeriodEnd > new Date();
+userSchema.methods.hasActiveSubscription = function () {
+  return this.subscription.status === 'active' &&
+    this.subscription.currentPeriodEnd > new Date();
 };
 
-userSchema.methods.canCreateTrips = function() {
+userSchema.methods.canCreateTrips = function () {
   return this.hasActiveSubscription(); // ✅ STRICT - plus de plan gratuit
 };
 
-userSchema.methods.canMakeBookings = function() {
+userSchema.methods.canMakeBookings = function () {
   return this.hasActiveSubscription(); // ✅ STRICT pour réservations
 };
 
-userSchema.methods.getSubscriptionStatus = function() {
+userSchema.methods.getSubscriptionStatus = function () {
   if (!this.subscription.stripeSubscriptionId) {
     return 'no_subscription';
   }
-  
+
   if (this.subscription.status === 'active' && this.subscription.currentPeriodEnd > new Date()) {
     return 'active';
   }
-  
+
   if (this.subscription.status === 'past_due') {
     return 'past_due';
   }
-  
+
   return 'inactive';
 };
 
@@ -335,21 +343,21 @@ userSchema.index({ 'subscription.stripeCustomerId': 1 });
 userSchema.index({ 'subscription.stripeSubscriptionId': 1 });
 userSchema.index({ 'subscription.status': 1 });
 
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     next();
   }
-  
+
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-userSchema.methods.comparePassword = async function(enteredPassword) {
+userSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-userSchema.methods.generateAuthToken = function() {
+userSchema.methods.generateAuthToken = function () {
   return jwt.sign(
     { userId: this._id },
     process.env.JWT_SECRET,
@@ -357,11 +365,11 @@ userSchema.methods.generateAuthToken = function() {
   );
 };
 
-userSchema.methods.isLocked = function() {
+userSchema.methods.isLocked = function () {
   return !!(this.security.lockUntil && this.security.lockUntil > Date.now());
 };
 
-userSchema.methods.incLoginAttempts = async function() {
+userSchema.methods.incLoginAttempts = async function () {
   if (this.security.lockUntil && this.security.lockUntil < Date.now()) {
     return this.updateOne({
       $unset: {
@@ -370,19 +378,19 @@ userSchema.methods.incLoginAttempts = async function() {
       }
     });
   }
-  
+
   const updates = { $inc: { 'security.loginAttempts': 1 } };
-  
+
   if (this.security.loginAttempts + 1 >= 5 && !this.isLocked()) {
     updates.$set = {
       'security.lockUntil': Date.now() + 2 * 60 * 60 * 1000
     };
   }
-  
+
   return this.updateOne(updates);
 };
 
-userSchema.methods.resetLoginAttempts = function() {
+userSchema.methods.resetLoginAttempts = function () {
   return this.updateOne({
     $unset: {
       'security.loginAttempts': 1,
@@ -395,45 +403,45 @@ userSchema.methods.resetLoginAttempts = function() {
 
 
 // Méthode pour vérifier si l'utilisateur peut créer des trajets payants
-userSchema.methods.canCreatePaidTrips = function() {
+userSchema.methods.canCreatePaidTrips = function () {
   const kycStatus = this.getKycStatus();
   return kycStatus.canReceivePayments;
 };
 
 // Méthode pour vérifier si l'utilisateur peut recevoir des virements
-userSchema.methods.canReceivePayouts = function() {
-  return this.stripe?.payoutsEnabled === true && 
-         this.kyc?.status === 'verified';
+userSchema.methods.canReceivePayouts = function () {
+  return this.stripe?.payoutsEnabled === true &&
+    this.kyc?.status === 'verified';
 };
 
 // Méthode pour obtenir le prochain lien d'onboarding valide
-userSchema.methods.getValidOnboardingLink = function() {
+userSchema.methods.getValidOnboardingLink = function () {
   if (!this.kyc?.onboardingLinks || this.kyc.onboardingLinks.length === 0) {
     return null;
   }
-  
+
   // Trouver le lien le plus récent non utilisé et non expiré
   const now = new Date();
   const validLink = this.kyc.onboardingLinks
     .filter(link => !link.used && link.expiresAt > now)
     .sort((a, b) => b.createdAt - a.createdAt)[0];
-    
+
   return validLink || null;
 };
 
 // ✅ CORRIGER la méthode getKycStatus
-userSchema.methods.getKycStatus = function() {
+userSchema.methods.getKycStatus = function () {
   const hasConnectAccount = !!(this.kyc && this.kyc.stripeConnectAccountId);
   const kycStatus = this.kyc ? this.kyc.status : 'not_started';
-  
+
   // ✅ CORRECTION : Vérifier aussi que le statut est 'verified'
-  const canReceivePayments = hasConnectAccount && 
-    kycStatus === 'verified' && 
+  const canReceivePayments = hasConnectAccount &&
+    kycStatus === 'verified' &&
     this.kyc.canReceivePayments === true;
-  
+
   let message = '';
   let nextAction = '';
-  
+
   switch (kycStatus) {
     case 'not_started':
       message = 'Commencez votre vérification pour recevoir des paiements';
@@ -463,7 +471,7 @@ userSchema.methods.getKycStatus = function() {
       message = 'Statut inconnu';
       nextAction = 'refresh_status';
   }
-  
+
   return {
     hasConnectAccount,
     connectAccountId: this.kyc?.stripeConnectAccountId || null,
@@ -483,14 +491,14 @@ userSchema.methods.getKycStatus = function() {
   };
 };
 
-userSchema.methods.canCreatePaidTrips = function() {
+userSchema.methods.canCreatePaidTrips = function () {
   const kycStatus = this.getKycStatus();
   return kycStatus.canReceivePayments;
 };
 
-userSchema.methods.canReceivePayouts = function() {
-  return this.stripe?.payoutsEnabled === true && 
-         this.kyc?.status === 'verified';
+userSchema.methods.canReceivePayouts = function () {
+  return this.stripe?.payoutsEnabled === true &&
+    this.kyc?.status === 'verified';
 };
 
 module.exports = mongoose.model('User', userSchema);

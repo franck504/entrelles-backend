@@ -8,19 +8,19 @@ const User = require('../models/User');
 const createTrip = async (req, res) => {
   try {
     console.log('🚗 Vérification KYC pour création de trajet...');
-    
+
     // ✅ VÉRIFICATION KYC OBLIGATOIRE
     const user = await User.findById(req.user.id);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
         message: 'Utilisateur non trouvé'
       });
     }
-    
+
     const kycStatus = user.getKycStatus();
-    
+
     // ✅ BLOQUER SI KYC NON VÉRIFIÉ
     if (!kycStatus.canReceivePayments) {
       return res.status(403).json({
@@ -42,7 +42,7 @@ const createTrip = async (req, res) => {
         }
       });
     }
-    
+
     console.log('✅ KYC vérifié, création du trajet autorisée');
 
     // Vérifier que la distance est fournie et valide
@@ -67,7 +67,7 @@ const createTrip = async (req, res) => {
     const pricePerKm = 0.55; // Prix par kilomètre par place
     const exactPricePerSeat = pricePerKm * req.body.distance;
     const pricePerSeat = Math.ceil(exactPricePerSeat * 100) / 100; // Arrondir au centime supérieur
-    
+
     // Définir le prix unitaire par place
     req.body.pricePerSeat = pricePerSeat;
     console.log(`💰 Prix unitaire calculé: ${pricePerSeat}€/place (${req.body.distance}km × ${pricePerKm}€/km)`);
@@ -82,7 +82,7 @@ const createTrip = async (req, res) => {
     // Calculer l'heure d'arrivée
     if (req.body.departureDateTime && req.body.estimatedDuration) {
       tripData.estimatedArrivalDateTime = new Date(
-        new Date(req.body.departureDateTime).getTime() + 
+        new Date(req.body.departureDateTime).getTime() +
         (req.body.estimatedDuration * 60 * 1000)
       );
     }
@@ -118,7 +118,7 @@ const createTrip = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Erreur création trajet:', error);
-    
+
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
@@ -136,7 +136,7 @@ const createTrip = async (req, res) => {
   }
 };
 
-// @desc    Obtenir tous les trajets
+// @desc    Obtenir tous les trajets (avec filtres optionnels)
 // @route   GET /api/trips
 // @access  Public
 const getAllTrips = async (req, res) => {
@@ -145,13 +145,43 @@ const getAllTrips = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const trips = await Trip.find({ status: 'active' })
+    // ✅ Construction de la requête avec filtres optionnels
+    let query = { status: 'active' };
+
+    // Filtre par ville de départ (optionnel)
+    if (req.query.departureCity) {
+      query['departure.city'] = new RegExp(req.query.departureCity, 'i');
+    }
+
+    // Filtre par ville d'arrivée (optionnel)
+    if (req.query.arrivalCity) {
+      query['arrival.city'] = new RegExp(req.query.arrivalCity, 'i');
+    }
+
+    // Filtre par date de départ (optionnel)
+    if (req.query.departureDate) {
+      const searchDate = new Date(req.query.departureDate);
+      const nextDay = new Date(searchDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+
+      query.departureDateTime = {
+        $gte: searchDate,
+        $lt: nextDay
+      };
+    }
+
+    // Filtre par nombre de places disponibles (optionnel)
+    if (req.query.passengers) {
+      query.availableSeats = { $gte: parseInt(req.query.passengers) };
+    }
+
+    const trips = await Trip.find(query)
       .populate('driver', 'profile.displayName profile.avatar stats.rating')
       .sort({ departureDateTime: 1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await Trip.countDocuments({ status: 'active' });
+    const total = await Trip.countDocuments(query);
 
     res.status(200).json({
       success: true,
@@ -193,7 +223,7 @@ const getTripById = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Get trip by ID error:', error);
-    
+
     if (error.name === 'CastError') {
       return res.status(404).json({
         success: false,
@@ -257,7 +287,7 @@ const updateTrip = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Update trip error:', error);
-    
+
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
@@ -349,7 +379,7 @@ const searchTrips = async (req, res) => {
       const searchDate = new Date(date);
       const nextDay = new Date(searchDate);
       nextDay.setDate(nextDay.getDate() + 1);
-      
+
       query.departureDateTime = {
         $gte: searchDate,
         $lt: nextDay

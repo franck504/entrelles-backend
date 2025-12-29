@@ -12,7 +12,7 @@ const generateToken = (userId) => {
 // Utilitaire pour envoyer une réponse avec token
 const sendTokenResponse = (user, statusCode, res, message = 'Success') => {
   const token = user.generateAuthToken();
-  
+
   const options = {
     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 jours
     httpOnly: true,
@@ -99,7 +99,7 @@ const register = async (req, res) => {
 
   } catch (error) {
     console.error('Registration error:', error);
-    
+
     // Gestion des erreurs de validation MongoDB
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
@@ -134,7 +134,7 @@ const login = async (req, res) => {
 
     // Trouver l'utilisateur avec le mot de passe
     const user = await User.findOne({ email }).select('+password');
-    
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -160,11 +160,11 @@ const login = async (req, res) => {
 
     // Vérifier le mot de passe
     const isPasswordValid = await user.comparePassword(password);
-    
+
     if (!isPasswordValid) {
       // Incrémenter les tentatives de connexion
       await user.incLoginAttempts();
-      
+
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -223,7 +223,7 @@ const logout = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -260,9 +260,9 @@ const getMe = async (req, res) => {
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    
+
     const user = await User.findOne({ email });
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -272,21 +272,21 @@ const forgotPassword = async (req, res) => {
 
     // Générer le token de réinitialisation
     const resetToken = crypto.randomBytes(20).toString('hex');
-    
+
     // Hasher le token et le sauvegarder
     user.security.passwordResetToken = crypto
       .createHash('sha256')
       .update(resetToken)
       .digest('hex');
-    
+
     // Expiration dans 10 minutes
     user.security.passwordResetExpires = Date.now() + 10 * 60 * 1000;
-    
+
     await user.save({ validateBeforeSave: false });
 
     // TODO: Envoyer l'email avec le token
     // Pour l'instant, on retourne le token (à supprimer en production)
-    
+
     res.status(200).json({
       success: true,
       message: 'Password reset email sent'
@@ -350,12 +350,22 @@ const resetPassword = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const fieldsToUpdate = {};
-    const allowedFields = ['displayName', 'firstName', 'lastName', 'phone', 'bio'];
-    
+    const allowedFields = [
+      'displayName', 'firstName', 'lastName', 'phone', 'bio',
+      'profileImageUrl', 'vehicleImageUrl', 'address'
+    ];
+
     // Filtrer les champs autorisés
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
-        fieldsToUpdate[`profile.${field}`] = req.body[field];
+        if (field === 'address' && typeof req.body[field] === 'object') {
+          // Gestion spéciale pour l'adresse (objet)
+          Object.keys(req.body[field]).forEach(addressField => {
+            fieldsToUpdate[`profile.address.${addressField}`] = req.body[field][addressField];
+          });
+        } else {
+          fieldsToUpdate[`profile.${field}`] = req.body[field];
+        }
       }
     });
 
@@ -399,7 +409,7 @@ const updateProfile = async (req, res) => {
 
   } catch (error) {
     console.error('Update profile error:', error);
-    
+
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
@@ -442,7 +452,7 @@ const changePassword = async (req, res) => {
 
     // Vérifier le mot de passe actuel
     const isCurrentPasswordValid = await user.comparePassword(currentPassword);
-    
+
     if (!isCurrentPasswordValid) {
       return res.status(401).json({
         success: false,

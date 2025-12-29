@@ -6,6 +6,7 @@ const {
   getPublicProfile,
   uploadAvatar,
   updateCompleteProfile,
+  uploadUserImage,
   upload
 } = require('../controllers/userController');
 
@@ -19,5 +20,6 @@ router.get('/:id', getPublicProfile);
 router.use(protect);
 router.put('/profile', updateCompleteProfile);
 router.post('/upload-avatar', upload.single('avatar'), uploadAvatar);
+router.post('/upload-image', upload.single('image'), uploadUserImage);
 
 module.exports = router;
