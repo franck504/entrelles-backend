@@ -34,13 +34,17 @@ const sendTokenResponse = (user, statusCode, res, message = 'Success') => {
           firstName: user.profile.firstName,
           lastName: user.profile.lastName,
           avatar: user.profile.avatar,
-          gender: user.profile.gender
+          profileImageUrl: user.profile.profileImageUrl,
+          vehicleImageUrl: user.profile.vehicleImageUrl,
+          gender: user.profile.gender,
+          address: user.profile.address
         },
         verification: {
           isEmailVerified: user.verification.isEmailVerified,
           isPhoneVerified: user.verification.isPhoneVerified,
           isIdentityVerified: user.verification.isIdentityVerified
         },
+        subscription: user.subscription,
         stats: user.stats,
         createdAt: user.createdAt
       }

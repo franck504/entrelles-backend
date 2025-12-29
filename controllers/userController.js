@@ -181,10 +181,13 @@ const uploadAvatar = async (req, res) => {
       },
       user: {
         id: user._id,
-        profile: {
-          displayName: user.profile.displayName,
-          avatar: user.profile.avatar
-        }
+        email: user.email,
+        profile: user.profile,
+        verification: user.verification,
+        subscription: user.subscription,
+        stats: user.stats,
+        preferences: user.preferences,
+        createdAt: user.createdAt
       }
     });
 
@@ -381,7 +384,13 @@ const uploadUserImage = async (req, res) => {
       imageUrl: uploadResult.secure_url,
       user: {
         id: user._id,
-        profile: user.profile
+        email: user.email,
+        profile: user.profile,
+        verification: user.verification,
+        subscription: user.subscription,
+        stats: user.stats,
+        preferences: user.preferences,
+        createdAt: user.createdAt
       }
     });
 
