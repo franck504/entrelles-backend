@@ -348,6 +348,13 @@ const uploadUserImage = async (req, res) => {
     const folder = type === 'profile' ? 'entrelles/profile_images' : 'entrelles/vehicle_images';
     const field = type === 'profile' ? 'profile.profileImageUrl' : 'profile.vehicleImageUrl';
 
+    console.log('📸 Début upload vers Cloudinary pour type:', type);
+    console.log('🔍 Vérification config Cloudinary:', {
+      hasCloudName: !!process.env.CLOUDINARY_CLOUD_NAME,
+      hasApiKey: !!process.env.CLOUDINARY_API_KEY,
+      hasApiSecret: !!process.env.CLOUDINARY_API_SECRET
+    });
+
     // Upload vers Cloudinary
     const uploadResult = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -361,8 +368,13 @@ const uploadUserImage = async (req, res) => {
           overwrite: true
         },
         (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
+          if (error) {
+            console.error('❌ Erreur brute Cloudinary:', error);
+            reject(error);
+          } else {
+            console.log('✅ Upload Cloudinary réussi:', result.secure_url);
+            resolve(result);
+          }
         }
       );
       uploadStream.end(req.file.buffer);
