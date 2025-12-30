@@ -100,8 +100,8 @@ const startKycProcess = async (req, res) => {
 
       const accountLink = await stripe.accountLinks.create({
         account: user.kyc.stripeConnectAccountId,
-        refresh_url: `${baseUrl}/kyc/cancel?user_id=${userId}`,
-        return_url: `${baseUrl}/kyc/success?user_id=${userId}`,
+        refresh_url: `${baseUrl}/api/kyc/cancel?user_id=${userId}`,
+        return_url: `${baseUrl}/api/kyc/success?user_id=${userId}`,
         type: 'account_onboarding'
       });
 
@@ -163,8 +163,8 @@ const startKycProcess = async (req, res) => {
 
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
-      refresh_url: `${baseUrl}/kyc/cancel?user_id=${userId}`,
-      return_url: `${baseUrl}/kyc/success?user_id=${userId}`,
+      refresh_url: `${baseUrl}/api/kyc/cancel?user_id=${userId}`,
+      return_url: `${baseUrl}/api/kyc/success?user_id=${userId}`,
       type: 'account_onboarding'
     });
 
