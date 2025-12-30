@@ -362,11 +362,11 @@ const deleteTrip = async (req, res) => {
 // @access  Public
 const searchTrips = async (req, res) => {
   try {
-    const { from, to, date, seats } = req.query;
+    const { from, to, date, seats, maxPrice } = req.query;
 
     let query = { status: 'active' };
 
-    // Filtres de recherche
+    // Filtres de recherche de base
     if (from) {
       query['departure.city'] = new RegExp(from, 'i');
     }
@@ -389,6 +389,30 @@ const searchTrips = async (req, res) => {
     if (seats) {
       query.availableSeats = { $gte: parseInt(seats) };
     }
+
+    // ✅ FILTRE PRIX MAXIMUM (Gère aussi le prix 0)
+    if (maxPrice !== undefined && maxPrice !== '' && !isNaN(parseFloat(maxPrice))) {
+      query.pricePerSeat = { $lte: parseFloat(maxPrice) };
+    }
+
+    // ✅ FILTRES PRÉFÉRENCES DYNAMIQUES
+    // Parcourt tous les paramètres commençant par "preferences."
+    Object.keys(req.query).forEach(key => {
+      if (key.startsWith('preferences.')) {
+        let value = req.query[key];
+
+        // Conversion des types (HTTP query strings sont toujours des strings)
+        if (value === 'true') value = true;
+        if (value === 'false') value = false;
+        if (!isNaN(value) && value !== '' && typeof value === 'string' && key.includes('maxDetour')) {
+          value = parseInt(value);
+        }
+
+        query[key] = value;
+      }
+    });
+
+    console.log('🔍 MongoDB Search Query:', JSON.stringify(query));
 
     const trips = await Trip.find(query)
       .populate('driver', 'profile.displayName profile.avatar stats.rating')
