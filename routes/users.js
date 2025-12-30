@@ -7,6 +7,7 @@ const {
   uploadAvatar,
   updateCompleteProfile,
   uploadUserImage,
+  getNearbyDrivers,
   upload
 } = require('../controllers/userController');
 
@@ -14,6 +15,7 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 
 // ===== ROUTES PUBLIQUES =====
+router.get('/nearby-drivers', getNearbyDrivers);
 router.get('/:id', getPublicProfile);
 
 // ===== ROUTES PROTÉGÉES =====

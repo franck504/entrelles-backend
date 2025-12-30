@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Trip = require('../models/Trip');
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 
@@ -420,10 +421,79 @@ const uploadUserImage = async (req, res) => {
   }
 };
 
+// @desc    Récupérer les conductrices à proximité (même ville)
+// @route   GET /api/users/nearby-drivers
+// @access  Public
+const getNearbyDrivers = async (req, res) => {
+  try {
+    const { city } = req.query;
+
+    if (!city) {
+      return res.status(400).json({
+        success: false,
+        message: 'La ville est requise'
+      });
+    }
+
+    console.log('🔍 Recherche conductrices à proximité de:', city);
+
+    // 1. Trouver les utilisateurs dans cette ville
+    // On cherche les profils actifs de type 'femme' (déjà forcé par le schema)
+    const users = await User.find({
+      'profile.address.city': new RegExp(city, 'i'),
+      status: 'active'
+    })
+      .select('profile.displayName profile.avatar stats.rating stats.tripsAsDriver metadata.lastActive')
+      .limit(20)
+      .lean();
+
+    if (!users || users.length === 0) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        drivers: []
+      });
+    }
+
+    // 2. Pour chaque utilisatrice, vérifier si elle a un trajet actif
+    const driversWithActivity = await Promise.all(users.map(async (user) => {
+      const activeTrip = await Trip.findOne({
+        driver: user._id,
+        status: 'active',
+        departureDateTime: { $gt: new Date() } // Trajet futur
+      }).select('_id').lean();
+
+      return {
+        id: user._id,
+        displayName: user.profile.displayName,
+        avatar: user.profile.avatar,
+        rating: user.stats.rating,
+        tripsAsDriver: user.stats.tripsAsDriver,
+        lastActive: user.metadata.lastActive,
+        hasActiveTrip: !!activeTrip
+      };
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: driversWithActivity.length,
+      drivers: driversWithActivity
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur récupération conductrices proches:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
 module.exports = {
   getPublicProfile,
   uploadAvatar,
   updateCompleteProfile,
   uploadUserImage,
+  getNearbyDrivers, // ✅ AJOUT
   upload
 };
