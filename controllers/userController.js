@@ -428,22 +428,20 @@ const getNearbyDrivers = async (req, res) => {
   try {
     const { city } = req.query;
 
-    if (!city) {
-      return res.status(400).json({
-        success: false,
-        message: 'La ville est requise'
-      });
+    console.log('🔍 Recherche conductrices:', city ? `à proximité de ${city}` : 'toutes les conductrices');
+
+    // 1. Construire la requête de base
+    const query = { status: 'active' };
+
+    // 2. Ajouter le filtre de ville si fourni
+    if (city) {
+      query['profile.address.city'] = new RegExp(city, 'i');
     }
 
-    console.log('🔍 Recherche conductrices à proximité de:', city);
-
-    // 1. Trouver les utilisateurs dans cette ville
-    // On cherche les profils actifs de type 'femme' (déjà forcé par le schema)
-    const users = await User.find({
-      'profile.address.city': new RegExp(city, 'i'),
-      status: 'active'
-    })
+    // 3. Trouver les utilisateurs (filtrées par ville ou toutes)
+    const users = await User.find(query)
       .select('profile.displayName profile.avatar stats.rating stats.tripsAsDriver metadata.lastActive')
+      .sort({ 'metadata.lastActive': -1 }) // Les plus actives en premier
       .limit(20)
       .lean();
 
