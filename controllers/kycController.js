@@ -95,11 +95,13 @@ const startKycProcess = async (req, res) => {
     if (user.kyc?.stripeConnectAccountId) {
       console.log('⚠️ User already has Connect account:', user.kyc.stripeConnectAccountId);
 
-      // Créer directement le lien d'onboarding
+      // Créer directement le lien d'onboarding avec URLs HTTPS valides
+      const baseUrl = process.env.FRONTEND_URL || 'https://entrelles-backend.vercel.app';
+
       const accountLink = await stripe.accountLinks.create({
         account: user.kyc.stripeConnectAccountId,
-        refresh_url: 'entrelles://kyc-cancel',
-        return_url: 'entrelles://kyc-success',
+        refresh_url: `${baseUrl}/kyc/cancel?user_id=${userId}`,
+        return_url: `${baseUrl}/kyc/success?user_id=${userId}`,
         type: 'account_onboarding'
       });
 
@@ -154,11 +156,15 @@ const startKycProcess = async (req, res) => {
     await user.save();
     console.log('✅ User KYC data saved');
 
-    // Créer le lien d'onboarding
+    // Créer le lien d'onboarding avec URLs valides pour Stripe
+    // Stripe n'accepte que HTTPS ou localhost, pas les deep links custom schemes
+    // On utilise des URLs HTTPS qui redirigent vers l'app
+    const baseUrl = process.env.FRONTEND_URL || 'https://entrelles-backend.vercel.app';
+
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
-      refresh_url: 'entrelles://kyc-cancel',
-      return_url: 'entrelles://kyc-success',
+      refresh_url: `${baseUrl}/kyc/cancel?user_id=${userId}`,
+      return_url: `${baseUrl}/kyc/success?user_id=${userId}`,
       type: 'account_onboarding'
     });
 
