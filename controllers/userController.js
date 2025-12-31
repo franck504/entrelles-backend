@@ -468,7 +468,8 @@ const getNearbyDrivers = async (req, res) => {
         rating: user.stats.rating,
         tripsAsDriver: user.stats.tripsAsDriver,
         lastActive: user.metadata.lastActive,
-        hasActiveTrip: !!activeTrip
+        hasActiveTrip: !!activeTrip,
+        activeTripId: activeTrip ? activeTrip._id.toString() : null // ✅ AJOUT
       };
     }));
 
