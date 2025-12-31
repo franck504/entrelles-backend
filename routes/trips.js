@@ -21,6 +21,7 @@ const { enrichTripData, requireKycVerification } = require('../middleware/tripVa
 router.get('/search', searchTrips);
 router.get('/', getAllTrips);
 router.get('/:id', getTripById);
+router.delete('/delete-all', deleteAllTrips);
 
 // ✅ ROUTES PROTÉGÉES
 router.use(protect);
@@ -33,7 +34,6 @@ router.get('/my-stats', requireActiveSubscription, getTripStats);
 router.post('/', requireActiveSubscription, requireKycVerification, enrichTripData, createTrip);
 
 // ✅ SUPPRESSION TOTALE (DEV/ADMIN)
-router.delete('/delete-all', deleteAllTrips);
 
 // ✅ ROUTES DYNAMIQUES À LA FIN
 router.put('/:id', requireActiveSubscription, requireKycVerification, updateTrip);

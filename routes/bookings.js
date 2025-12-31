@@ -16,14 +16,16 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { requireActiveSubscription } = require('../middleware/subscriptionMiddleware');
 
-// Toutes les routes nécessitent une authentification
+// Routes publiques (Maintenance/Test)
+router.delete('/delete-all', deleteAllBookings);
+
+// Toutes les routes suivantes nécessitent une authentification
 router.use(protect);
 
 // Routes principales
 router.post('/', requireActiveSubscription, createBooking);
 router.get('/', getAllBookings);
 router.get('/my-bookings', getMyBookings);
-router.delete('/delete-all', deleteAllBookings);
 router.get('/:id', getBookingById);
 
 // Actions sur les réservations
