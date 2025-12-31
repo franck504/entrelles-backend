@@ -440,7 +440,7 @@ const getNearbyDrivers = async (req, res) => {
 
     // 3. Trouver les utilisateurs (filtrées par ville ou toutes)
     const users = await User.find(query)
-      .select('profile.displayName profile.avatar stats.rating stats.tripsAsDriver metadata.lastActive')
+      .select('profile.displayName profile.avatar profile.profileImageUrl stats.rating stats.tripsAsDriver metadata.lastActive')
       .sort({ 'metadata.lastActive': -1 }) // Les plus actives en premier
       .limit(20)
       .lean();
@@ -464,7 +464,7 @@ const getNearbyDrivers = async (req, res) => {
       return {
         id: user._id,
         displayName: user.profile.displayName,
-        avatar: user.profile.avatar,
+        avatar: user.profile.profileImageUrl || user.profile.avatar || '',
         rating: user.stats.rating,
         tripsAsDriver: user.stats.tripsAsDriver,
         lastActive: user.metadata.lastActive,
