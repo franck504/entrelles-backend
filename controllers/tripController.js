@@ -90,7 +90,7 @@ const createTrip = async (req, res) => {
     console.log('📊 Données finales:', tripData);
 
     const trip = await Trip.create(tripData);
-    await trip.populate('driver', 'profile.displayName profile.avatar stats.rating email');
+    await trip.populate('driver', 'profile.displayName profile.avatar profile.profileImageUrl profile.vehicleImageUrl stats.rating email');
 
     res.status(201).json({
       success: true,
@@ -176,7 +176,7 @@ const getAllTrips = async (req, res) => {
     }
 
     const trips = await Trip.find(query)
-      .populate('driver', 'profile.displayName profile.avatar stats.rating')
+      .populate('driver', 'profile.displayName profile.avatar profile.profileImageUrl profile.vehicleImageUrl stats.rating')
       .sort({ departureDateTime: 1 })
       .skip(skip)
       .limit(limit);
@@ -207,7 +207,7 @@ const getAllTrips = async (req, res) => {
 const getTripById = async (req, res) => {
   try {
     const trip = await Trip.findById(req.params.id)
-      .populate('driver', 'profile.displayName profile.avatar stats.rating verification.isIdentityVerified');
+      .populate('driver', 'profile.displayName profile.avatar profile.profileImageUrl profile.vehicleImageUrl stats.rating verification.isIdentityVerified');
 
     if (!trip) {
       return res.status(404).json({
@@ -277,7 +277,7 @@ const updateTrip = async (req, res) => {
       req.params.id,
       updateData,
       { new: true, runValidators: true }
-    ).populate('driver', 'profile.displayName profile.avatar stats.rating');
+    ).populate('driver', 'profile.displayName profile.avatar profile.profileImageUrl profile.vehicleImageUrl stats.rating');
 
     res.status(200).json({
       success: true,
@@ -415,7 +415,7 @@ const searchTrips = async (req, res) => {
     console.log('🔍 MongoDB Search Query:', JSON.stringify(query));
 
     const trips = await Trip.find(query)
-      .populate('driver', 'profile.displayName profile.avatar stats.rating')
+      .populate('driver', 'profile.displayName profile.avatar profile.profileImageUrl profile.vehicleImageUrl stats.rating')
       .sort({ departureDateTime: 1 })
       .limit(20);
 
@@ -449,7 +449,7 @@ const getMyTrips = async (req, res) => {
     }
 
     const trips = await Trip.find(query)
-      .populate('driver', 'profile.displayName profile.avatar')
+      .populate('driver', 'profile.displayName profile.avatar profile.profileImageUrl profile.vehicleImageUrl')
       .sort({ departureDateTime: -1 });
 
     // Ajouter les informations de réservation
