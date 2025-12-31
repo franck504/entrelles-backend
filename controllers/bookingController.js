@@ -23,7 +23,7 @@ const createBooking = async (req, res) => {
 
     // ✅ VÉRIFIER KYC DE LA CONDUCTRICE
     const driverKycStatus = trip.driver.getKycStatus();
-    
+
     if (!driverKycStatus.canReceivePayments) {
       return res.status(400).json({
         success: false,
@@ -113,7 +113,7 @@ const createBooking = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Create booking error:', error);
-    
+
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
@@ -172,8 +172,8 @@ const getBookingById = async (req, res) => {
     }
 
     // Vérifier que l'utilisateur est impliqué dans cette réservation
-   if (booking.passenger._id.toString() !== req.user.id.toString() &&
-    booking.driver._id.toString() !== req.user.id.toString()) {
+    if (booking.passenger._id.toString() !== req.user.id.toString() &&
+      booking.driver._id.toString() !== req.user.id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to view this booking'
@@ -187,7 +187,7 @@ const getBookingById = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Get booking error:', error);
-    
+
     if (error.name === 'CastError') {
       return res.status(404).json({
         success: false,
@@ -239,6 +239,12 @@ const confirmBooking = async (req, res) => {
     booking.status = 'confirmed';
     booking.confirmedAt = new Date();
     await booking.save();
+
+    // ✅ AJOUT: Incrémenter stats passager (tripsAsPassenger)
+    await User.findByIdAndUpdate(booking.passenger._id, {
+      $inc: { 'stats.tripsAsPassenger': 1 }
+    });
+    console.log('✅ Stats passager mises à jour: tripsAsPassenger +1');
 
     // Mettre à jour les places disponibles
     const trip = await Trip.findById(booking.trip._id);
@@ -295,8 +301,8 @@ const cancelBooking = async (req, res) => {
     }
 
     // Vérifier que l'utilisateur peut annuler
-    if (booking.passenger._id.toString() !== req.user.id.toString() && 
-        booking.driver._id.toString() !== req.user.id.toString()) {
+    if (booking.passenger._id.toString() !== req.user.id.toString() &&
+      booking.driver._id.toString() !== req.user.id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to cancel this booking'
@@ -355,8 +361,8 @@ const completeBooking = async (req, res) => {
     }
 
     // Vérifier que l'utilisateur est impliqué
-  if (booking.passenger._id.toString() !== req.user.id.toString() &&
-    booking.driver._id.toString() !== req.user.id.toString()) {
+    if (booking.passenger._id.toString() !== req.user.id.toString() &&
+      booking.driver._id.toString() !== req.user.id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to complete this booking'
@@ -365,6 +371,16 @@ const completeBooking = async (req, res) => {
 
     // Marquer comme terminé
     await booking.complete();
+
+    // ✅ AJOUT: Incrémenter stats passager et conductrice (tripsCompleted)
+    await User.findByIdAndUpdate(booking.passenger._id, {
+      $inc: { 'stats.tripsCompleted': 1 }
+    });
+
+    await User.findByIdAndUpdate(booking.driver._id, {
+      $inc: { 'stats.tripsCompleted': 1 }
+    });
+    console.log('✅ Stats tripsCompleted mises à jour pour passager et conductrice');
 
     console.log('✅ Booking completed:', booking._id);
 
@@ -444,7 +460,7 @@ const getMyBookings = async (req, res) => {
     const { status, type } = req.query;
 
     let bookings;
-    
+
     if (type === 'passenger') {
       bookings = await Booking.find({ passenger: userId })
         .populate('trip', 'departure arrival departureDateTime distance')

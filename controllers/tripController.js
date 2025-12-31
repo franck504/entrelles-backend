@@ -90,6 +90,13 @@ const createTrip = async (req, res) => {
     console.log('📊 Données finales:', tripData);
 
     const trip = await Trip.create(tripData);
+
+    // ✅ AJOUT: Incrémenter stats conductrice
+    await User.findByIdAndUpdate(req.user.id, {
+      $inc: { 'stats.tripsAsDriver': 1 }
+    });
+    console.log('✅ Stats conductrice mises à jour: tripsAsDriver +1');
+
     await trip.populate('driver', 'profile.displayName profile.avatar profile.profileImageUrl profile.vehicleImageUrl stats.rating email');
 
     res.status(201).json({
