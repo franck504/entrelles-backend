@@ -20,6 +20,7 @@ const { enrichTripData, requireKycVerification } = require('../middleware/tripVa
 // ✅ ROUTES PUBLIQUES EN PREMIER
 router.get('/search', searchTrips);
 router.get('/', getAllTrips);
+router.get('/:id', getTripById);
 
 // ✅ ROUTES PROTÉGÉES
 router.use(protect);
@@ -35,7 +36,6 @@ router.post('/', requireActiveSubscription, requireKycVerification, enrichTripDa
 router.delete('/delete-all', deleteAllTrips);
 
 // ✅ ROUTES DYNAMIQUES À LA FIN
-router.get('/:id', getTripById);
 router.put('/:id', requireActiveSubscription, requireKycVerification, updateTrip);
 router.delete('/:id', requireActiveSubscription, deleteTrip);
 
