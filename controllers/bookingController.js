@@ -490,6 +490,26 @@ const getMyBookings = async (req, res) => {
   }
 };
 
+// @desc    Supprimer toutes les réservations (DEV/ADMIN)
+// @route   DELETE /api/bookings/delete-all
+// @access  Private
+const deleteAllBookings = async (req, res) => {
+  try {
+    await Booking.deleteMany({});
+    console.log('🗑️ Toutes les réservations ont été supprimées');
+    res.status(200).json({
+      success: true,
+      message: 'Toutes les réservations ont été supprimées'
+    });
+  } catch (error) {
+    console.error('❌ Erreur suppression réservations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la suppression des réservations'
+    });
+  }
+};
+
 module.exports = {
   createBooking,
   getAllBookings,
@@ -498,5 +518,6 @@ module.exports = {
   cancelBooking,
   completeBooking,
   addReview,
-  getMyBookings
+  getMyBookings,
+  deleteAllBookings
 };

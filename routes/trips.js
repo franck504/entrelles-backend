@@ -9,7 +9,8 @@ const {
   deleteTrip,
   searchTrips,
   getMyTrips,
-  getTripStats
+  getTripStats,
+  deleteAllTrips
 } = require('../controllers/tripController');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -29,6 +30,9 @@ router.get('/my-stats', requireActiveSubscription, getTripStats);
 
 // ✅ CRÉATION AVEC KYC OBLIGATOIRE
 router.post('/', requireActiveSubscription, requireKycVerification, enrichTripData, createTrip);
+
+// ✅ SUPPRESSION TOTALE (DEV/ADMIN)
+router.delete('/delete-all', deleteAllTrips);
 
 // ✅ ROUTES DYNAMIQUES À LA FIN
 router.get('/:id', getTripById);

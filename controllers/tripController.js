@@ -536,6 +536,26 @@ const getTripStats = async (req, res) => {
   }
 };
 
+// @desc    Supprimer tous les trajets (DEV/ADMIN)
+// @route   DELETE /api/trips/delete-all
+// @access  Private
+const deleteAllTrips = async (req, res) => {
+  try {
+    await Trip.deleteMany({});
+    console.log('🗑️ Tous les trajets ont été supprimés');
+    res.status(200).json({
+      success: true,
+      message: 'Tous les trajets ont été supprimés'
+    });
+  } catch (error) {
+    console.error('❌ Erreur suppression trajets:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la suppression des trajets'
+    });
+  }
+};
+
 module.exports = {
   createTrip,
   getAllTrips,
@@ -544,5 +564,6 @@ module.exports = {
   deleteTrip,
   searchTrips,
   getMyTrips,
-  getTripStats
+  getTripStats,
+  deleteAllTrips
 };

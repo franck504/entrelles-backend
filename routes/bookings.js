@@ -9,7 +9,8 @@ const {
   cancelBooking,
   completeBooking,
   addReview,
-  getMyBookings
+  getMyBookings,
+  deleteAllBookings
 } = require('../controllers/bookingController');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -22,6 +23,7 @@ router.use(protect);
 router.post('/', requireActiveSubscription, createBooking);
 router.get('/', getAllBookings);
 router.get('/my-bookings', getMyBookings);
+router.delete('/delete-all', deleteAllBookings);
 router.get('/:id', getBookingById);
 
 // Actions sur les réservations
