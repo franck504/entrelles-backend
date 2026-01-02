@@ -148,6 +148,46 @@ class MapsService {
     }
 
     /**
+     * Convertit une adresse en coordonnées (Geocoding)
+     * @param {string} text - L'adresse à rechercher
+     * @returns {Promise<Object>} { latitude, longitude, label }
+     */
+    async geocode(text) {
+        if (!this.apiKey) {
+            throw new Error('OpenRouteService API key is not configured');
+        }
+
+        try {
+            console.log(`🔍 Appel OpenRouteService Geocoding API pour: ${text}`);
+
+            const response = await axios.get(`${this.baseUrl.replace('/v2', '')}/geocode/search`, {
+                params: {
+                    api_key: this.apiKey,
+                    text: text,
+                    size: 1
+                }
+            });
+
+            if (!response.data || !response.data.features || response.data.features.length === 0) {
+                console.warn(`⚠️ Aucun résultat trouvé pour: ${text}`);
+                return null;
+            }
+
+            const feature = response.data.features[0];
+            const [lon, lat] = feature.geometry.coordinates;
+
+            return {
+                latitude: lat,
+                longitude: lon,
+                label: feature.properties.label
+            };
+        } catch (error) {
+            console.error('❌ Erreur geocode:', error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+    /**
      * Vide le cache (utile pour debug)
      */
     clearCache() {

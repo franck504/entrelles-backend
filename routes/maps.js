@@ -8,6 +8,7 @@ const mapsController = require('../controllers/mapsController');
  * @access  Public
  */
 router.post('/calculate-route', mapsController.calculateRoute);
+router.get('/geocode', mapsController.geocode);
 
 /**
  * @route   GET /api/maps/cache-stats

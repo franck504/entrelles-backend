@@ -73,6 +73,46 @@ exports.calculateRoute = async (req, res) => {
 };
 
 /**
+ * @route GET /api/maps/geocode
+ * @desc Résout une adresse en coordonnées
+ * @access Public
+ */
+exports.geocode = async (req, res) => {
+    try {
+        const { text } = req.query;
+
+        if (!text) {
+            return res.status(400).json({
+                success: false,
+                message: 'text parameter is required',
+            });
+        }
+
+        const data = await googleMapsService.geocode(text);
+
+        if (!data) {
+            return res.status(404).json({
+                success: false,
+                message: 'No coordinates found for this address',
+            });
+        }
+
+        res.json({
+            success: true,
+            data,
+        });
+
+    } catch (error) {
+        console.error('❌ Erreur geocode controller:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to geocode address',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        });
+    }
+};
+
+/**
  * @route GET /api/maps/cache-stats
  * @desc Statistiques du cache Google Maps
  * @access Public (à sécuriser en production)
