@@ -9,6 +9,7 @@ const mapsController = require('../controllers/mapsController');
  */
 router.post('/calculate-route', mapsController.calculateRoute);
 router.get('/geocode', mapsController.geocode);
+router.get('/reverse-geocode', mapsController.reverseGeocode);
 
 /**
  * @route   GET /api/maps/cache-stats

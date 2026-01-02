@@ -113,6 +113,46 @@ exports.geocode = async (req, res) => {
 };
 
 /**
+ * @route GET /api/maps/reverse-geocode
+ * @desc Résout des coordonnées en adresse
+ * @access Public
+ */
+exports.reverseGeocode = async (req, res) => {
+    try {
+        const { lat, lon } = req.query;
+
+        if (!lat || !lon) {
+            return res.status(400).json({
+                success: false,
+                message: 'lat and lon parameters are required',
+            });
+        }
+
+        const address = await googleMapsService.reverseGeocode(lat, lon);
+
+        if (!address) {
+            return res.status(404).json({
+                success: false,
+                message: 'No address found for these coordinates',
+            });
+        }
+
+        res.json({
+            success: true,
+            data: { address },
+        });
+
+    } catch (error) {
+        console.error('❌ Erreur reverse-geocode controller:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to reverse geocode coordinates',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        });
+    }
+};
+
+/**
  * @route GET /api/maps/cache-stats
  * @desc Statistiques du cache Google Maps
  * @access Public (à sécuriser en production)
@@ -153,3 +193,7 @@ exports.clearCache = (req, res) => {
         });
     }
 };
+
+
+
+// okay

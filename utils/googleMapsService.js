@@ -188,6 +188,40 @@ class MapsService {
     }
 
     /**
+     * Convertit des coordonnées en adresse (Reverse Geocoding)
+     * @param {number} lat - Latitude
+     * @param {number} lon - Longitude
+     * @returns {Promise<string>} L'adresse formatée
+     */
+    async reverseGeocode(lat, lon) {
+        if (!this.apiKey) {
+            throw new Error('OpenRouteService API key is not configured');
+        }
+
+        try {
+            console.log(`🔍 Reverse Geocoding pour: ${lat}, ${lon}`);
+
+            const response = await axios.get(`${this.baseUrl.replace('/v2', '')}/geocode/reverse`, {
+                params: {
+                    api_key: this.apiKey,
+                    'point.lat': lat,
+                    'point.lon': lon,
+                    size: 1
+                }
+            });
+
+            if (!response.data || !response.data.features || response.data.features.length === 0) {
+                return null;
+            }
+
+            return response.data.features[0].properties.label;
+        } catch (error) {
+            console.error('❌ Erreur reverseGeocode:', error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+    /**
      * Vide le cache (utile pour debug)
      */
     clearCache() {
