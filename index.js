@@ -88,6 +88,7 @@ app.use('/api/trips', require('./routes/trips'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/maps', require('./routes/maps')); // ✅ NOUVEAU: Google Maps
+app.use('/api/notifications', require('./routes/notifications'));
 
 // Test database route
 app.get('/test-db', async (req, res) => {

@@ -23,10 +23,10 @@ const protect = async (req, res, next) => {
     try {
       // Vérifier le token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
+
       // Trouver l'utilisateur
       const user = await User.findById(decoded.userId);
-      
+
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -43,7 +43,11 @@ const protect = async (req, res, next) => {
       }
 
       // Ajouter l'utilisateur à la requête
-      req.user = { id: user._id, email: user.email };
+      req.user = {
+        id: user._id,
+        email: user.email,
+        displayName: user.profile?.displayName || 'Une utilisatrice'
+      };
       next();
 
     } catch (error) {
@@ -77,9 +81,13 @@ const optionalAuth = async (req, res, next) => {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.userId);
-        
+
         if (user && user.status === 'active') {
-          req.user = { id: user._id, email: user.email };
+          req.user = {
+            id: user._id,
+            email: user.email,
+            displayName: user.profile?.displayName || 'Une utilisatrice'
+          };
         }
       } catch (error) {
         // Token invalide, mais on continue sans utilisateur

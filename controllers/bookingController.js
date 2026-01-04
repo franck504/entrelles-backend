@@ -1,6 +1,7 @@
 const Booking = require('../models/Booking');
 const Trip = require('../models/Trip');
 const User = require('../models/User');
+const { createNotification } = require('./notificationController');
 
 // @desc    Créer une nouvelle réservation
 // @route   POST /api/bookings
@@ -77,6 +78,16 @@ const createBooking = async (req, res) => {
     // ✅ AJOUT: Incrémenter les stats de demandes du trajet
     await Trip.findByIdAndUpdate(tripId, {
       $inc: { 'stats.bookingRequests': 1 }
+    });
+
+    // ✅ AJOUT: Notification pour la conductrice
+    await createNotification({
+      recipient: trip.driver._id,
+      sender: passengerId,
+      type: 'new_booking',
+      title: 'Nouvelle demande de réservation',
+      message: `${req.user.displayName || 'Une passagère'} a demandé ${numberOfSeats} place(s) pour votre trajet ${trip.departure.city} → ${trip.arrival.city}.`,
+      relatedId: booking._id.toString()
     });
 
     // Populer les données pour la réponse
@@ -249,6 +260,16 @@ const confirmBooking = async (req, res) => {
     await User.findByIdAndUpdate(booking.passenger._id, {
       $inc: { 'stats.tripsAsPassenger': 1 }
     });
+
+    // ✅ AJOUT: Notification pour la passagère
+    await createNotification({
+      recipient: booking.passenger._id,
+      sender: req.user.id,
+      type: 'booking_confirmed',
+      title: 'Réservation confirmée !',
+      message: `Votre demande pour le trajet ${booking.trip.departure.city} → ${booking.trip.arrival.city} a été acceptée par ${booking.driver.profile.displayName}.`,
+      relatedId: booking._id.toString()
+    });
     console.log('✅ Stats passager mises à jour: tripsAsPassenger +1');
 
     // Mettre à jour les places disponibles
@@ -316,6 +337,17 @@ const cancelBooking = async (req, res) => {
 
     // Annuler la réservation
     await booking.cancel(req.user.id, reason);
+
+    // ✅ AJOUT: Notification
+    const isDriver = req.user.id.toString() === booking.driver._id.toString();
+    await createNotification({
+      recipient: isDriver ? booking.passenger._id : booking.driver._id,
+      sender: req.user.id,
+      type: 'booking_cancelled',
+      title: 'Réservation annulée',
+      message: `La réservation pour le trajet ${booking.trip.departure.city} → ${booking.trip.arrival.city} a été annulée par ${isDriver ? 'la conductrice' : 'la passagère'}.`,
+      relatedId: booking._id.toString()
+    });
 
     // Remettre les places disponibles si c'était confirmé
     if (booking.status === 'confirmed') {
