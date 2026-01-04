@@ -75,6 +75,10 @@ const createBooking = async (req, res) => {
       status: 'pending'
     });
 
+    // ✅ AJOUT: Mettre à jour les places disponibles dès la demande (bloquer les places)
+    trip.availableSeats = Math.max(0, trip.availableSeats - numberOfSeats);
+    await trip.save();
+
     // ✅ AJOUT: Incrémenter les stats de demandes du trajet
     await Trip.findByIdAndUpdate(tripId, {
       $inc: { 'stats.bookingRequests': 1 }
@@ -272,12 +276,8 @@ const confirmBooking = async (req, res) => {
     });
     console.log('✅ Stats passager mises à jour: tripsAsPassenger +1');
 
-    // Mettre à jour les places disponibles
-    const trip = await Trip.findById(booking.trip._id);
-    if (trip) {
-      trip.availableSeats = Math.max(0, trip.availableSeats - booking.numberOfSeats);
-      await trip.save();
-    }
+    // ✅ SUPPRIMÉ : La décrémentation se fait maintenant au moment de la demande (createBooking)
+    // pour que les places soient bloquées immédiatement dans la recherche.
 
     console.log('✅ Booking confirmed:', booking._id);
 
@@ -349,8 +349,8 @@ const cancelBooking = async (req, res) => {
       relatedId: booking._id.toString()
     });
 
-    // Remettre les places disponibles si c'était confirmé
-    if (booking.status === 'confirmed') {
+    // ✅ MODIFIÉ : Remettre les places disponibles si c'était confirmé OU en attente
+    if (booking.status === 'confirmed' || booking.status === 'pending') {
       const trip = await Trip.findById(booking.trip._id);
       if (trip) {
         trip.availableSeats += booking.numberOfSeats;
