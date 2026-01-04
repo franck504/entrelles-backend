@@ -74,6 +74,11 @@ const createBooking = async (req, res) => {
       status: 'pending'
     });
 
+    // ✅ AJOUT: Incrémenter les stats de demandes du trajet
+    await Trip.findByIdAndUpdate(tripId, {
+      $inc: { 'stats.bookingRequests': 1 }
+    });
+
     // Populer les données pour la réponse
     await booking.populate([
       { path: 'trip', select: 'departure arrival departureDateTime pricePerSeat distance' },
