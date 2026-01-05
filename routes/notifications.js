@@ -3,9 +3,13 @@ const router = express.Router();
 const {
     getNotifications,
     markAsRead,
-    markAllAsRead
+    markAllAsRead,
+    deleteAllNotifications
 } = require('../controllers/notificationController');
 const { protect } = require('../middleware/authMiddleware');
+
+// ✅ ROUTE PUBLIQUE
+router.delete('/delete-all', deleteAllNotifications);
 
 // Toutes les routes de notifications sont protégées
 router.use(protect);

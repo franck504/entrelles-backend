@@ -101,9 +101,27 @@ const createNotification = async (data) => {
     }
 };
 
+const deleteAllNotifications = async (req, res) => {
+    try {
+        await Notification.deleteMany({});
+        console.log('🗑️ Toutes les notifications ont été supprimées');
+        res.status(200).json({
+            success: true,
+            message: 'Toutes les notifications ont été supprimées'
+        });
+    } catch (error) {
+        console.error('❌ Error deleting all notifications:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la suppression des notifications'
+        });
+    }
+};
+
 module.exports = {
     getNotifications,
     markAsRead,
     markAllAsRead,
-    createNotification
+    createNotification,
+    deleteAllNotifications
 };

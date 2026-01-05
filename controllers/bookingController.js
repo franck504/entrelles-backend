@@ -335,6 +335,9 @@ const cancelBooking = async (req, res) => {
       });
     }
 
+    // ✅ SAUVEGARDER le statut initial avant l'annulation
+    const initialStatus = booking.status;
+
     // Annuler la réservation
     await booking.cancel(req.user.id, reason);
 
@@ -349,12 +352,13 @@ const cancelBooking = async (req, res) => {
       relatedId: booking._id.toString()
     });
 
-    // ✅ MODIFIÉ : Remettre les places disponibles si c'était confirmé OU en attente
-    if (booking.status === 'confirmed' || booking.status === 'pending') {
+    // ✅ MODIFIÉ : Utiliser le statut INITIAL pour remettre les places
+    if (initialStatus === 'confirmed' || initialStatus === 'pending') {
       const trip = await Trip.findById(booking.trip._id);
       if (trip) {
         trip.availableSeats += booking.numberOfSeats;
         await trip.save();
+        console.log(`✅ Places réincrémentées : ${trip.availableSeats} (Statut initial: ${initialStatus})`);
       }
     }
 
