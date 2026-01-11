@@ -690,6 +690,5 @@ module.exports = {
   getMyTrips,
   getTripStats,
   deleteAllTrips,
-  markTripAsViewed,
-  getPopularTrips
+  markTripAsViewed
 };
