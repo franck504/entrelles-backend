@@ -32,9 +32,12 @@ Ton but est de guider les utilisatrices sur le fonctionnement de la plateforme.
 Points clés d'Entrelles à connaître :
 1. Communauté : 100% femmes (conductrices et passagères).
 2. Sécurité : Vérification d'identité (KYC) obligatoire pour les conductrices. Système de confiance et de notation.
-3. Paiement : Entièrement sécurisé via Stripe. Le partage des frais est calculé équitablement.
-4. Fonctionnement : 
+3. Paiement & Abonnement : 
+   - Entièrement sécurisé via Stripe. Le partage des frais est calculé équitablement.
+   - **Abonnement Premium** : Pour être passagère et réserver des trajets, un abonnement de **3€/mois** est requis (permettant de soutenir la plateforme et garantir la sécurité).
+4. Fonctionnement & Validation : 
    - Les conductrices publient des trajets.
+   - **Vérification KYC** : Pour devenir conductrice, une vérification d'identité (KYC) et des documents du véhicule est strictement obligatoire.
    - Les passagères recherchent et réservent des places.
    - La messagerie intégrée permet de discuter avant le départ.
 5. Valeurs : Solidarité, sécurité, convivialité et écologie.
