@@ -114,6 +114,29 @@ const markMessagesAsRead = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Obtenir les messages d'une conversation
+ * @route   GET /api/messages/:conversationId
+ */
+const getMessages = async (req, res) => {
+    try {
+        const messages = await Message.find({
+            conversationId: req.params.conversationId
+        }).sort({ createdAt: 1 });
+
+        res.status(200).json({
+            success: true,
+            messages
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la récupération des messages',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     sendMessage,
     getConversations,

@@ -1,3 +1,5 @@
+const express = require('express');
+const router = express.Router();
 const { sendMessage, getConversations, getMessages, markMessagesAsRead } = require('../controllers/messageController');
 const { protect } = require('../middleware/authMiddleware');
 
