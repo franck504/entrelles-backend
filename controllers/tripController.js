@@ -437,6 +437,33 @@ const cancelTrip = async (req, res) => {
   }
 };
 
+// @desc    Obtenir les trajets populaires
+// @route   GET /api/trips/popular
+// @access  Public
+const getPopularTrips = async (req, res) => {
+  try {
+    const trips = await Trip.find({
+      status: 'active',
+      departureDateTime: { $gte: new Date() }
+    })
+      .sort({ 'stats.views': -1, 'stats.bookingRequests': -1 })
+      .limit(10)
+      .populate('driver', 'profile.displayName profile.photoUrl rating');
+
+    res.status(200).json({
+      success: true,
+      count: trips.length,
+      trips
+    });
+  } catch (error) {
+    console.error('❌ Get popular trips error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching popular trips'
+    });
+  }
+};
+
 // @desc    Rechercher des trajets
 // @route   GET /api/trips/search
 // @access  Public
@@ -690,5 +717,6 @@ module.exports = {
   getMyTrips,
   getTripStats,
   deleteAllTrips,
-  markTripAsViewed
+  markTripAsViewed,
+  getPopularTrips
 };
