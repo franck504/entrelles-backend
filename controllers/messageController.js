@@ -122,11 +122,16 @@ const getMessages = async (req, res) => {
     try {
         const messages = await Message.find({
             conversationId: req.params.conversationId
-        }).sort({ createdAt: 1 });
+        })
+            .sort({ createdAt: -1 })
+            .limit(30);
+
+        // Remettre dans l'ordre chronologique pour l'affichage
+        const orderedMessages = messages.reverse();
 
         res.status(200).json({
             success: true,
-            messages
+            messages: orderedMessages
         });
     } catch (error) {
         res.status(500).json({
