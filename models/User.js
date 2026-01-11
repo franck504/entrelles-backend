@@ -173,7 +173,11 @@ const userSchema = new mongoose.Schema({
     cancellationRate: {
       type: Number,
       default: 0
-    }
+    },
+    reviews: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Review'
+    }]
   },
   subscription: {
     plan: {

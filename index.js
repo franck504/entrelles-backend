@@ -90,6 +90,8 @@ app.use('/api/payments', require('./routes/payments'));
 app.use('/api/maps', require('./routes/maps')); // ✅ NOUVEAU: Google Maps
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/ai', require('./routes/ai')); // ✅ NOUVEAU: Assistant IA
+app.use('/api/reviews', require('./routes/reviews'));
+app.use('/api/messages', require('./routes/messages'));
 
 // Test database route
 app.get('/test-db', async (req, res) => {
