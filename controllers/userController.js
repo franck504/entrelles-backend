@@ -488,35 +488,11 @@ const getNearbyDrivers = async (req, res) => {
   }
 };
 
-// @desc    Supprimer toutes les utilisatrices (DEV/ADMIN)
-// @route   DELETE /api/users/delete-all
-// @access  Public (ou Private si vous voulez restreindre)
-const deleteAllUsers = async (req, res) => {
-  try {
-    const result = await User.deleteMany({});
-    console.log(`🗑️ Suppression massive : ${result.deletedCount} utilisatrices supprimées`);
-
-    res.status(200).json({
-      success: true,
-      message: 'Toutes les utilisatrices ont été supprimées avec succès',
-      count: result.deletedCount
-    });
-  } catch (error) {
-    console.error('❌ Erreur suppression massive utilisent:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la suppression massive',
-      error: error.message
-    });
-  }
-};
-
 module.exports = {
   getPublicProfile,
   uploadAvatar,
   updateCompleteProfile,
   uploadUserImage,
-  getNearbyDrivers,
-  deleteAllUsers, // ✅ AJOUT
+  getNearbyDrivers, // ✅ AJOUT
   upload
 };
