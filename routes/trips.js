@@ -10,7 +10,8 @@ const {
   searchTrips,
   getMyTrips,
   getTripStats,
-  deleteAllTrips
+  deleteAllTrips,
+  markTripAsViewed
 } = require('../controllers/tripController');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -36,6 +37,7 @@ router.post('/', requireActiveSubscription, requireKycVerification, enrichTripDa
 // ✅ SUPPRESSION TOTALE (DEV/ADMIN)
 
 // ✅ ROUTES DYNAMIQUES À LA FIN
+router.post('/:id/view', markTripAsViewed);
 router.put('/:id', requireActiveSubscription, requireKycVerification, updateTrip);
 router.delete('/:id', requireActiveSubscription, deleteTrip);
 

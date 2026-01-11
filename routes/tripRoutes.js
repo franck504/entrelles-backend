@@ -8,7 +8,8 @@ const {
   updateTrip,
   deleteTrip,
   cancelTrip,
-  getPopularTrips
+  getPopularTrips,
+  markTripAsViewed
 } = require('../controllers/tripController');
 const { protect } = require('../middleware/authMiddleware');
 const { enrichTripData } = require('../middleware/tripValidation'); // ✅ NOUVEAU
@@ -25,6 +26,7 @@ router.post('/', enrichTripData, createTrip); // ✅ MIDDLEWARE AJOUTÉ
 router.get('/', getMyTrips);
 router.put('/:id', updateTrip);
 router.delete('/:id', deleteTrip);
+router.post('/:id/view', markTripAsViewed);
 router.patch('/:id/cancel', cancelTrip);
 
 module.exports = router;

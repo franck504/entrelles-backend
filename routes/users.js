@@ -8,6 +8,7 @@ const {
   updateCompleteProfile,
   uploadUserImage,
   getNearbyDrivers,
+  deleteAllUsers,
   upload
 } = require('../controllers/userController');
 
@@ -16,6 +17,7 @@ const { protect } = require('../middleware/authMiddleware');
 
 // ===== ROUTES PUBLIQUES =====
 router.get('/nearby-drivers', getNearbyDrivers);
+router.delete('/delete-all', deleteAllUsers); // ✅ AJOUT CRITIQUE (Suppression massive)
 router.get('/:id', getPublicProfile);
 
 // ===== ROUTES PROTÉGÉES =====

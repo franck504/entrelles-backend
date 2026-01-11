@@ -148,6 +148,10 @@ const tripSchema = new mongoose.Schema({
       type: Number,
       default: 0
     },
+    viewers: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
     bookingRequests: {
       type: Number,
       default: 0
@@ -158,7 +162,7 @@ const tripSchema = new mongoose.Schema({
 });
 
 // ✅ MIDDLEWARE PRE-SAVE pour génération automatique
-tripSchema.pre('save', function(next) {
+tripSchema.pre('save', function (next) {
   // Génération automatique des données manquantes
   if (!this.estimatedArrivalDateTime && this.departureDateTime && this.estimatedDuration) {
     this.estimatedArrivalDateTime = new Date(
@@ -169,27 +173,27 @@ tripSchema.pre('save', function(next) {
 });
 
 // Méthode pour vérifier si un trajet peut être réservé par un utilisateur
-tripSchema.methods.canBeBookedBy = function(userId) {
+tripSchema.methods.canBeBookedBy = function (userId) {
   // Vérifier que le trajet est actif
   if (this.status !== 'active') {
     return false;
   }
-  
+
   // Vérifier que ce n'est pas le conducteur qui essaie de réserver son propre trajet
   if (this.driver.toString() === userId.toString()) {
     return false;
   }
-  
+
   // Vérifier que le trajet n'est pas dans le passé
   if (this.departureDateTime <= new Date()) {
     return false;
   }
-  
+
   // Vérifier qu'il y a des places disponibles
   if (this.availableSeats <= 0) {
     return false;
   }
-  
+
   return true;
 };
 

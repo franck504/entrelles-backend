@@ -556,6 +556,56 @@ const deleteAllTrips = async (req, res) => {
   }
 };
 
+// @desc    Marquer un trajet comme vu
+// @route   POST /api/trips/:id/view
+// @access  Private
+const markTripAsViewed = async (req, res) => {
+  try {
+    const tripId = req.params.id;
+    const userId = req.user.id;
+
+    // Utiliser $addToSet pour s'assurer que l'utilisateur n'est ajouté qu'une seule fois
+    // On incrémente views seulement si l'utilisateur n'était pas déjà dans viewers
+    const trip = await Trip.findById(tripId);
+
+    if (!trip) {
+      return res.status(404).json({
+        success: false,
+        message: 'Trajet non trouvé'
+      });
+    }
+
+    // Ne rien faire si c'est le conducteur
+    if (trip.driver.toString() === userId.toString()) {
+      return res.status(200).json({
+        success: true,
+        message: 'Conductrice ignorée pour les stats de vue'
+      });
+    }
+
+    const alreadyViewed = trip.stats.viewers.includes(userId);
+
+    if (!alreadyViewed) {
+      await Trip.findByIdAndUpdate(tripId, {
+        $addToSet: { 'stats.viewers': userId },
+        $inc: { 'stats.views': 1 }
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Vue enregistrée'
+    });
+
+  } catch (error) {
+    console.error('❌ Error marking trip as viewed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'enregistrement de la vue'
+    });
+  }
+};
+
 module.exports = {
   createTrip,
   getAllTrips,
@@ -565,5 +615,6 @@ module.exports = {
   searchTrips,
   getMyTrips,
   getTripStats,
-  deleteAllTrips
+  deleteAllTrips,
+  markTripAsViewed
 };
