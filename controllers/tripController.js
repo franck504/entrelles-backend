@@ -364,6 +364,79 @@ const deleteTrip = async (req, res) => {
   }
 };
 
+// @desc    Annuler un trajet (avec notifications aux passagères)
+// @route   PATCH /api/trips/:id/cancel
+// @access  Private
+const cancelTrip = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const trip = await Trip.findById(req.params.id);
+
+    if (!trip) {
+      return res.status(404).json({
+        success: false,
+        message: 'Trip not found'
+      });
+    }
+
+    // Vérifier que l'utilisateur est le conducteur
+    if (trip.driver.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to cancel this trip'
+      });
+    }
+
+    // Récupérer toutes les réservations pour ce trajet
+    const bookings = await Booking.find({
+      trip: req.params.id,
+      status: { $in: ['confirmed', 'paid', 'pending'] }
+    }).populate('passenger', 'email profile.displayName');
+
+    // Annuler toutes les réservations et notifier les passagères
+    const Notification = require('../models/Notification');
+    for (const booking of bookings) {
+      booking.status = 'cancelled';
+      booking.cancellationReason = `Trajet annulé par la conductrice: ${reason || 'Non spécifiée'}`;
+      booking.cancelledAt = new Date();
+      booking.cancelledBy = req.user.id;
+      await booking.save();
+
+      // Créer une notification pour chaque passagère
+      if (booking.passenger) {
+        await Notification.create({
+          user: booking.passenger._id,
+          type: 'trip_cancelled',
+          title: 'Trajet annulé',
+          message: `Le trajet ${trip.departure.city} → ${trip.arrival.city} a été annulé. Raison: ${reason || 'Non spécifiée'}`,
+          data: { tripId: trip._id, bookingId: booking._id, reason }
+        });
+      }
+    }
+
+    // Marquer le trajet comme annulé
+    trip.status = 'cancelled';
+    trip.cancellationReason = reason;
+    trip.cancelledAt = new Date();
+    await trip.save();
+
+    console.log(`✅ Trip ${trip._id} cancelled. ${bookings.length} bookings affected.`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Trip cancelled successfully',
+      data: { tripId: trip._id, bookingsAffected: bookings.length, reason }
+    });
+
+  } catch (error) {
+    console.error('❌ Cancel trip error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error cancelling trip'
+    });
+  }
+};
+
 // @desc    Rechercher des trajets
 // @route   GET /api/trips/search
 // @access  Public
@@ -612,9 +685,11 @@ module.exports = {
   getTripById,
   updateTrip,
   deleteTrip,
+  cancelTrip,
   searchTrips,
   getMyTrips,
   getTripStats,
   deleteAllTrips,
-  markTripAsViewed
+  markTripAsViewed,
+  getPopularTrips
 };
