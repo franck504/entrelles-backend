@@ -116,6 +116,34 @@ const userSchema = new mongoose.Schema({
       default: false
     }
   },
+  vehicle: {
+    brand: {
+      type: String,
+      trim: true
+    },
+    model: {
+      type: String,
+      trim: true
+    },
+    color: {
+      type: String,
+      trim: true
+    },
+    year: {
+      type: Number,
+      min: [1990, 'Vehicle year must be 1990 or later'],
+      max: [new Date().getFullYear() + 1, 'Vehicle year cannot be in the future']
+    },
+    licensePlate: {
+      type: String,
+      trim: true
+    },
+    fuelType: {
+      type: String,
+      enum: ['Essence', 'Diesel', 'Hybride', 'Électrique', 'GPL', 'Autre'],
+      default: 'Essence'
+    }
+  },
   verification: {
     isEmailVerified: {
       type: Boolean,
