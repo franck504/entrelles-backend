@@ -61,9 +61,22 @@ const getConversations = async (req, res) => {
             .populate('lastMessage')
             .sort({ updatedAt: -1 });
 
+        // Ajouter le nombre de messages non lus pour chaque conversation
+        const conversationsWithUnread = await Promise.all(conversations.map(async (conv) => {
+            const unreadCount = await Message.countDocuments({
+                conversationId: conv._id,
+                receiverId: req.user.id,
+                isRead: false
+            });
+            return {
+                ...conv.toObject(),
+                unreadCount
+            };
+        }));
+
         res.status(200).json({
             success: true,
-            conversations
+            conversations: conversationsWithUnread
         });
     } catch (error) {
         res.status(500).json({
@@ -75,23 +88,27 @@ const getConversations = async (req, res) => {
 };
 
 /**
- * @desc    Obtenir les messages d'une conversation
- * @route   GET /api/messages/:conversationId
+ * @desc    Marquer tous les messages d'une conversation comme lus
+ * @route   PUT /api/messages/:conversationId/read
  */
-const getMessages = async (req, res) => {
+const markMessagesAsRead = async (req, res) => {
     try {
-        const messages = await Message.find({
-            conversationId: req.params.conversationId
-        }).sort({ createdAt: 1 });
+        const { conversationId } = req.params;
+        const userId = req.user.id;
+
+        await Message.updateMany(
+            { conversationId, receiverId: userId, isRead: false },
+            { isRead: true }
+        );
 
         res.status(200).json({
             success: true,
-            messages
+            message: 'Messages marqués comme lus'
         });
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: 'Erreur lors de la récupération des messages',
+            message: 'Erreur lors du marquage des messages',
             error: error.message
         });
     }
@@ -100,5 +117,6 @@ const getMessages = async (req, res) => {
 module.exports = {
     sendMessage,
     getConversations,
-    getMessages
+    getMessages,
+    markMessagesAsRead
 };
