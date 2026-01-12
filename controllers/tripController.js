@@ -326,7 +326,7 @@ const deleteTrip = async (req, res) => {
     }
 
     // Vérifier que l'utilisateur est le conducteur
-    if (trip.driver.toString() !== req.user.id) {
+    if (!trip.driver.equals(req.user.id)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to delete this trip'
@@ -380,7 +380,7 @@ const cancelTrip = async (req, res) => {
     }
 
     // Vérifier que l'utilisateur est le conducteur
-    if (trip.driver.toString() !== req.user.id) {
+    if (!trip.driver.equals(req.user.id)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to cancel this trip'

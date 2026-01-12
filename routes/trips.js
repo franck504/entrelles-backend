@@ -7,6 +7,7 @@ const {
   getTripById,
   updateTrip,
   deleteTrip,
+  cancelTrip,
   searchTrips,
   getMyTrips,
   getTripStats,
@@ -38,6 +39,7 @@ router.post('/', requireActiveSubscription, requireKycVerification, enrichTripDa
 
 // ✅ ROUTES DYNAMIQUES À LA FIN
 router.post('/:id/view', markTripAsViewed);
+router.patch('/:id/cancel', requireActiveSubscription, cancelTrip);
 router.put('/:id', requireActiveSubscription, requireKycVerification, updateTrip);
 router.delete('/:id', requireActiveSubscription, deleteTrip);
 
