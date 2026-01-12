@@ -302,7 +302,7 @@ bookingSchema.methods.confirmPayment = async function () {
   return this;
 };
 
-// Traiter un remboursement
+// Traiter un remboursement (80% passagère, 10% plateforme, 10% conductrice)
 bookingSchema.methods.processRefund = async function () {
   const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
@@ -313,30 +313,53 @@ bookingSchema.methods.processRefund = async function () {
       throw new Error('No payment to refund');
     }
 
+    // ✅ Calcul des montants : 80% remboursé, 10% plateforme, 10% conductrice
+    const totalAmount = this.payment.amount; // Montant en centimes
+    const refundAmount = Math.floor(totalAmount * 0.80); // 80% pour la passagère
+    const platformFee = Math.floor(totalAmount * 0.10);  // 10% pour la plateforme
+    const driverFee = Math.floor(totalAmount * 0.10);    // 10% pour la conductrice
+
+    console.log('💰 Cancellation fees breakdown:', {
+      total: totalAmount / 100 + '€',
+      refundToPassenger: refundAmount / 100 + '€ (80%)',
+      platformKeeps: platformFee / 100 + '€ (10%)',
+      driverKeeps: driverFee / 100 + '€ (10%)'
+    });
+
+    // Créer le remboursement partiel (80%)
     const refund = await stripe.refunds.create({
       payment_intent: this.payment.stripePaymentIntentId,
-      amount: this.payment.amount,
+      amount: refundAmount, // Seulement 80%
       reason: 'requested_by_customer',
       metadata: {
         bookingId: this._id.toString(),
-        type: 'trip_cancellation'
+        type: 'trip_cancellation',
+        refundPercent: '80',
+        platformFee: platformFee.toString(),
+        driverFee: driverFee.toString()
       }
     });
 
+    // Mettre à jour les informations de paiement
     this.payment.refundId = refund.id;
     this.payment.refundedAt = new Date();
-    this.payment.refundAmount = refund.amount;
-    this.payment.status = 'canceled';
+    this.payment.refundAmount = refundAmount;
+    this.payment.status = 'refunded';
 
-    // Annuler le virement conductrice si pas encore effectué
+    // ✅ La conductrice garde 10% : ajuster le montant du payout
     if (this.payment.driverPayout.status !== 'paid') {
-      this.payment.driverPayout.status = 'failed';
-      this.payment.driverPayout.failureReason = 'Booking cancelled and refunded';
+      // Ne pas annuler le payout, mais réduire le montant à 10%
+      this.payment.driverPayout.amount = driverFee;
+      this.payment.driverPayout.status = 'scheduled'; // Garder programmé
+      console.log('💳 Driver keeps cancellation fee:', driverFee / 100 + '€');
     }
 
     await this.save();
 
-    console.log('✅ Refund processed successfully:', refund.id);
+    console.log('✅ Partial refund (80%) processed:', refund.id);
+    console.log('💰 Platform keeps:', platformFee / 100 + '€');
+    console.log('💰 Driver keeps:', driverFee / 100 + '€');
+
     return refund;
 
   } catch (error) {
