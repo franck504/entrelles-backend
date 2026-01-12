@@ -15,10 +15,10 @@ const handleStripeWebhook = async (req, res) => {
     try {
         event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
         console.log('✅ Webhook signature verified:', event.type);
-        
+
         // ✅ AJOUTER CES LOGS
         console.log('📋 Event data:', JSON.stringify(event.data.object, null, 2));
-        
+
     } catch (err) {
         console.error('❌ Webhook signature verification failed:', err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -177,104 +177,104 @@ const handleStripeWebhook = async (req, res) => {
 
 // ✅ CORRIGER CETTE FONCTION dans webhooks.js
 const handleCheckoutSessionCompleted = async (session) => {
-  try {
-    console.log('🛒 Checkout session completed:', session.id);
-    console.log('📋 Session details:', {
-      mode: session.mode,
-      payment_status: session.payment_status,
-      subscription: session.subscription,
-      metadata: session.metadata
-    });
-    
-    // Vérifier que c'est un abonnement
-    if (session.mode !== 'subscription') {
-      console.log('⚠️ Not a subscription checkout, skipping');
-      return;
+    try {
+        console.log('🛒 Checkout session completed:', session.id);
+        console.log('📋 Session details:', {
+            mode: session.mode,
+            payment_status: session.payment_status,
+            subscription: session.subscription,
+            metadata: session.metadata
+        });
+
+        // Vérifier que c'est un abonnement
+        if (session.mode !== 'subscription') {
+            console.log('⚠️ Not a subscription checkout, skipping');
+            return;
+        }
+
+        // Vérifier que le paiement est réussi
+        if (session.payment_status !== 'paid') {
+            console.log('⚠️ Payment not completed, status:', session.payment_status);
+            return;
+        }
+
+        const userId = session.metadata.userId;
+        if (!userId) {
+            console.log('⚠️ No userId in session metadata');
+            console.log('Available metadata:', session.metadata);
+            return;
+        }
+
+        console.log('👤 Processing subscription for user:', userId);
+
+        // ✅ RÉCUPÉRER L'ABONNEMENT STRIPE COMPLET
+        const subscriptionId = session.subscription;
+        if (!subscriptionId) {
+            console.log('⚠️ No subscription ID in session');
+            return;
+        }
+
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+        console.log('📋 Subscription retrieved:', {
+            id: subscription.id,
+            status: subscription.status,
+            current_period_start: subscription.current_period_start,
+            current_period_end: subscription.current_period_end
+        });
+
+        // ✅ MISE À JOUR IDENTIQUE À /subscribe
+        const updateData = {
+            // Stripe IDs
+            'subscription.stripeSubscriptionId': subscription.id,
+            'subscription.stripeCustomerId': session.customer,
+
+            // Statut (EXACTEMENT comme /subscribe)
+            'subscription.status': subscription.status,
+            'subscription.plan': 'premium',
+            'subscription.isActive': subscription.status === 'active',
+
+            // Dates (EXACTEMENT comme /subscribe)
+            'subscription.currentPeriodStart': new Date(subscription.current_period_start * 1000),
+            'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
+
+            // Tracking
+            'subscription.activatedAt': new Date(),
+            'subscription.activatedVia': 'checkout'
+        };
+
+        console.log('💾 Updating user with data:', updateData);
+
+        const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+            new: true,
+            runValidators: true
+        });
+
+        if (updatedUser) {
+            console.log('✅ User subscription activated via checkout:', {
+                userId: userId,
+                email: updatedUser.email,
+                plan: updatedUser.subscription.plan,
+                isActive: updatedUser.subscription.isActive,
+                status: updatedUser.subscription.status,
+                stripeSubscriptionId: updatedUser.subscription.stripeSubscriptionId
+            });
+
+            // ✅ VÉRIFICATION FINALE
+            console.log('🔍 Final subscription state:', {
+                isActive: updatedUser.subscription.isActive,
+                plan: updatedUser.subscription.plan,
+                status: updatedUser.subscription.status
+            });
+
+        } else {
+            console.error('❌ User not found for ID:', userId);
+        }
+
+    } catch (error) {
+        console.error('❌ Error processing checkout completion:', error);
+        console.error('Stack trace:', error.stack);
     }
-
-    // Vérifier que le paiement est réussi
-    if (session.payment_status !== 'paid') {
-      console.log('⚠️ Payment not completed, status:', session.payment_status);
-      return;
-    }
-
-    const userId = session.metadata.userId;
-    if (!userId) {
-      console.log('⚠️ No userId in session metadata');
-      console.log('Available metadata:', session.metadata);
-      return;
-    }
-
-    console.log('👤 Processing subscription for user:', userId);
-
-    // ✅ RÉCUPÉRER L'ABONNEMENT STRIPE COMPLET
-    const subscriptionId = session.subscription;
-    if (!subscriptionId) {
-      console.log('⚠️ No subscription ID in session');
-      return;
-    }
-
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    
-    console.log('📋 Subscription retrieved:', {
-      id: subscription.id,
-      status: subscription.status,
-      current_period_start: subscription.current_period_start,
-      current_period_end: subscription.current_period_end
-    });
-
-    // ✅ MISE À JOUR IDENTIQUE À /subscribe
-    const updateData = {
-      // Stripe IDs
-      'subscription.stripeSubscriptionId': subscription.id,
-      'subscription.stripeCustomerId': session.customer,
-      
-      // Statut (EXACTEMENT comme /subscribe)
-      'subscription.status': subscription.status,
-      'subscription.plan': 'premium',
-      'subscription.isActive': subscription.status === 'active',
-      
-      // Dates (EXACTEMENT comme /subscribe)
-      'subscription.currentPeriodStart': new Date(subscription.current_period_start * 1000),
-      'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
-      
-      // Tracking
-      'subscription.activatedAt': new Date(),
-      'subscription.activatedVia': 'checkout'
-    };
-
-    console.log('💾 Updating user with data:', updateData);
-
-    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { 
-      new: true,
-      runValidators: true 
-    });
-
-    if (updatedUser) {
-      console.log('✅ User subscription activated via checkout:', {
-        userId: userId,
-        email: updatedUser.email,
-        plan: updatedUser.subscription.plan,
-        isActive: updatedUser.subscription.isActive,
-        status: updatedUser.subscription.status,
-        stripeSubscriptionId: updatedUser.subscription.stripeSubscriptionId
-      });
-      
-      // ✅ VÉRIFICATION FINALE
-      console.log('🔍 Final subscription state:', {
-        isActive: updatedUser.subscription.isActive,
-        plan: updatedUser.subscription.plan,
-        status: updatedUser.subscription.status
-      });
-      
-    } else {
-      console.error('❌ User not found for ID:', userId);
-    }
-
-  } catch (error) {
-    console.error('❌ Error processing checkout completion:', error);
-    console.error('Stack trace:', error.stack);
-  }
 };
 
 // 💳 === FONCTIONS PAIEMENTS TRAJETS ===
@@ -293,21 +293,15 @@ const handlePaymentSucceeded = async (paymentIntent) => {
         // Confirmer le paiement
         booking.payment.status = 'succeeded';
         booking.payment.paidAt = new Date();
-        booking.status = 'confirmed';
-        booking.confirmedAt = new Date();
+        booking.status = 'paid';
 
         await booking.save();
 
-        // Mettre à jour les places disponibles
-        const Trip = require('../models/Trip');
-        const trip = await Trip.findById(booking.trip);
-        if (trip) {
-            trip.availableSeats = Math.max(0, trip.availableSeats - booking.numberOfSeats);
-            await trip.save();
-        }
+        // Les places sont déjà décomptées à la réservation (createBooking)
+        // Pas besoin de les décrémenter à nouveau ici.
 
         // TODO: Programmer le virement à la conductrice (après le trajet)
-        console.log(`💰 Payment confirmed: ${booking.payment.driverAmount/100}€ for driver, ${booking.payment.commissionAmount/100}€ commission`);
+        console.log(`💰 Payment confirmed: ${booking.payment.driverAmount / 100}€ for driver, ${booking.payment.commissionAmount / 100}€ commission`);
 
     } catch (error) {
         console.error('❌ Error processing payment success:', error);

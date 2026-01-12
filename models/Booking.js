@@ -37,6 +37,7 @@ const bookingSchema = new mongoose.Schema({
       'rejected',
       'refused',
       'paid',
+      'expired',
     ],
     default: 'pending'
   },
@@ -141,6 +142,7 @@ const bookingSchema = new mongoose.Schema({
     refundedAt: Date,
     receiptUrl: String
   },
+  paymentDeadline: Date,
 
   metadata: {
     userAgent: String,

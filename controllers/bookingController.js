@@ -255,9 +255,27 @@ const confirmBooking = async (req, res) => {
       });
     }
 
-    // Confirmer la réservation
+    // Confirmer la réservation et définir la date limite de paiement
     booking.status = 'confirmed';
     booking.confirmedAt = new Date();
+
+    // Calcul de la date limite de paiement (ex: 24h avant le départ, ou 2h après confirmation si départ proche)
+    const deadlineHours = booking.trip.preferences?.paymentDeadlineHours || 24;
+    const departureTime = new Date(booking.trip.departureDateTime).getTime();
+    const now = new Date().getTime();
+
+    // La date limite est soit (départ - délai), soit (maintenant + 2h) si le délai est déjà passé
+    let deadline = departureTime - (deadlineHours * 60 * 60 * 1000);
+    if (deadline < now + (2 * 60 * 60 * 1000)) {
+      deadline = now + (2 * 60 * 60 * 1000); // Minimum 2h pour payer
+    }
+
+    // Ne jamais dépasser la date du trajet
+    if (deadline > departureTime) {
+      deadline = departureTime;
+    }
+
+    booking.paymentDeadline = new Date(deadline);
     await booking.save();
 
     // ✅ AJOUT: Incrémenter stats passager (tripsAsPassenger)
@@ -266,12 +284,19 @@ const confirmBooking = async (req, res) => {
     });
 
     // ✅ AJOUT: Notification pour la passagère
+    const deadlineStr = new Date(booking.paymentDeadline).toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
     await createNotification({
       recipient: booking.passenger._id,
       sender: req.user.id,
       type: 'booking_confirmed',
-      title: 'Réservation confirmée !',
-      message: `Votre demande pour le trajet ${booking.trip.departure.city} → ${booking.trip.arrival.city} a été acceptée par ${booking.driver.profile.displayName}.`,
+      title: 'Demande acceptée ! 💳',
+      message: `Votre demande pour le trajet ${booking.trip.departure.city} → ${booking.trip.arrival.city} a été acceptée ! Veuillez confirmer en payant avant le ${deadlineStr} pour sécuriser votre place.`,
       relatedId: booking._id.toString()
     });
     console.log('✅ Stats passager mises à jour: tripsAsPassenger +1');
@@ -352,8 +377,8 @@ const cancelBooking = async (req, res) => {
       relatedId: booking._id.toString()
     });
 
-    // ✅ MODIFIÉ : Utiliser le statut INITIAL pour remettre les places
-    if (initialStatus === 'confirmed' || initialStatus === 'pending') {
+    // ✅ MODIFIÉ : Utiliser le statut INITIAL pour remettre les places (inclure 'paid')
+    if (initialStatus === 'confirmed' || initialStatus === 'pending' || initialStatus === 'paid') {
       const trip = await Trip.findById(booking.trip._id);
       if (trip) {
         trip.availableSeats += booking.numberOfSeats;
@@ -492,12 +517,46 @@ const addReview = async (req, res) => {
   }
 };
 
+// Helper pour expirer les réservations non payées
+const expireOldBookings = async (userId) => {
+  try {
+    const now = new Date();
+    // Trouver les réservations confirmées (en attente paiement) dont la date limite est passée
+    const expiredBookings = await Booking.find({
+      $or: [{ passenger: userId }, { driver: userId }],
+      status: 'confirmed',
+      paymentDeadline: { $lt: now },
+      'payment.status': { $ne: 'succeeded' }
+    });
+
+    for (const booking of expiredBookings) {
+      console.log('🕒 Booking expired:', booking._id);
+      booking.status = 'expired';
+      await booking.save();
+
+      // Remettre les places
+      const trip = await Trip.findById(booking.trip);
+      if (trip) {
+        trip.availableSeats += booking.numberOfSeats;
+        await trip.save();
+        console.log(`✅ Places réincrémentées pour trajet ${trip._id}`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error expiring bookings:', error);
+  }
+};
+
 // @desc    Obtenir mes réservations
 // @route   GET /api/bookings/my-bookings
 // @access  Private
 const getMyBookings = async (req, res) => {
   try {
     const userId = req.user.id;
+
+    // ✅ Nettoyer les réservations expirées avant de les renvoyer
+    await expireOldBookings(userId);
+
     const { status, type } = req.query;
 
     let bookings;

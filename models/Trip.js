@@ -114,6 +114,12 @@ const tripSchema = new mongoose.Schema({
       min: [0, 'Max detour cannot be negative'],
       max: [50, 'Max detour cannot exceed 50 km'],
       default: 10
+    },
+    paymentDeadlineHours: {
+      type: Number,
+      min: [1, 'Deadline must be at least 1 hour'],
+      max: [72, 'Deadline cannot exceed 72 hours'],
+      default: 24 // Par défaut, la passagère doit payer 24h avant le trajet
     }
   },
   description: {
