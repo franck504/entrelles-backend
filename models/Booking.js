@@ -304,8 +304,8 @@ bookingSchema.methods.confirmPayment = async function () {
   return this;
 };
 
-// Traiter un remboursement (80% passagère, 10% plateforme, 10% conductrice)
-bookingSchema.methods.processRefund = async function () {
+// Traiter un remboursement (par défaut 80% si passagère annule, 100% si trajet annulé)
+bookingSchema.methods.processRefund = async function (percent = 0.8) {
   const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
   try {
@@ -315,28 +315,31 @@ bookingSchema.methods.processRefund = async function () {
       throw new Error('No payment to refund');
     }
 
-    // ✅ Calcul des montants : 80% remboursé, 10% plateforme, 10% conductrice
+    // ✅ Calcul des montants
     const totalAmount = this.payment.amount; // Montant en centimes
-    const refundAmount = Math.floor(totalAmount * 0.80); // 80% pour la passagère
-    const platformFee = Math.floor(totalAmount * 0.10);  // 10% pour la plateforme
-    const driverFee = Math.floor(totalAmount * 0.10);    // 10% pour la conductrice
+    const refundAmount = Math.floor(totalAmount * percent);
+
+    // Les frais plateforme et conductrice sont calculés sur le reste
+    const remaining = totalAmount - refundAmount;
+    const platformFee = percent === 1.0 ? 0 : Math.floor(remaining * 0.5);
+    const driverFee = percent === 1.0 ? 0 : (remaining - platformFee);
 
     console.log('💰 Cancellation fees breakdown:', {
       total: totalAmount / 100 + '€',
-      refundToPassenger: refundAmount / 100 + '€ (80%)',
-      platformKeeps: platformFee / 100 + '€ (10%)',
-      driverKeeps: driverFee / 100 + '€ (10%)'
+      refundToPassenger: refundAmount / 100 + '€ (' + (percent * 100) + '%)',
+      platformKeeps: platformFee / 100 + '€',
+      driverKeeps: driverFee / 100 + '€'
     });
 
-    // Créer le remboursement partiel (80%)
+    // Créer le remboursement
     const refund = await stripe.refunds.create({
       payment_intent: this.payment.stripePaymentIntentId,
-      amount: refundAmount, // Seulement 80%
-      reason: 'requested_by_customer',
+      amount: refundAmount,
+      reason: percent === 1.0 ? 'requested_by_customer' : 'requested_by_customer', // Stripe reasons are limited
       metadata: {
         bookingId: this._id.toString(),
-        type: 'trip_cancellation',
-        refundPercent: '80',
+        type: percent === 1.0 ? 'trip_cancellation_by_driver' : 'booking_cancellation_by_passenger',
+        refundPercent: (percent * 100).toString(),
         platformFee: platformFee.toString(),
         driverFee: driverFee.toString()
       }
@@ -348,12 +351,19 @@ bookingSchema.methods.processRefund = async function () {
     this.payment.refundAmount = refundAmount;
     this.payment.status = 'refunded';
 
-    // ✅ La conductrice garde 10% : ajuster le montant du payout
+    // ✅ Ajuster le payout de la conductrice
     if (this.payment.driverPayout.status !== 'paid') {
-      // Ne pas annuler le payout, mais réduire le montant à 10%
-      this.payment.driverPayout.amount = driverFee;
-      this.payment.driverPayout.status = 'scheduled'; // Garder programmé
-      console.log('💳 Driver keeps cancellation fee:', driverFee / 100 + '€');
+      if (percent === 1.0) {
+        // Annulation complète, pas de payout
+        this.payment.driverPayout.amount = 0;
+        this.payment.driverPayout.status = 'cancelled';
+        console.log('💳 Driver payout cancelled (full refund)');
+      } else {
+        // La conductrice garde sa part des frais
+        this.payment.driverPayout.amount = driverFee;
+        this.payment.driverPayout.status = 'scheduled';
+        console.log('💳 Driver keeps cancellation fee:', driverFee / 100 + '€');
+      }
     }
 
     await this.save();
@@ -392,7 +402,10 @@ bookingSchema.methods.cancel = async function (userId, reason) {
   // ✅ NOUVEAU : Gérer remboursement automatique si payé
   if (this.payment.status === 'succeeded') {
     console.log('💰 Processing automatic refund...');
-    await this.processRefund();
+    // Si c'est le conducteur qui annule ou si le trajet est annulé, 100% de remboursement
+    // Dans cancelTrip on passera un flag ou une raison spécifique
+    const isFullRefund = reason && reason.includes('Trajet annulé par la conductrice');
+    await this.processRefund(isFullRefund ? 1.0 : 0.8);
   }
 
   await this.save();

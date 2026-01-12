@@ -396,11 +396,7 @@ const cancelTrip = async (req, res) => {
     // Annuler toutes les réservations et notifier les passagères
     const Notification = require('../models/Notification');
     for (const booking of bookings) {
-      booking.status = 'cancelled';
-      booking.cancellationReason = `Trajet annulé par la conductrice: ${reason || 'Non spécifiée'}`;
-      booking.cancelledAt = new Date();
-      booking.cancelledBy = req.user.id;
-      await booking.save();
+      await booking.cancel(req.user.id, `Trajet annulé par la conductrice: ${reason || 'Non spécifiée'}`);
 
       // Créer une notification pour chaque passagère
       if (booking.passenger) {
