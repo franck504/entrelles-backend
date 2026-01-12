@@ -403,9 +403,30 @@ bookingSchema.methods.cancel = async function (userId, reason) {
   if (this.payment.status === 'succeeded') {
     console.log('💰 Processing automatic refund...');
     // Si c'est le conducteur qui annule ou si le trajet est annulé, 100% de remboursement
-    // Dans cancelTrip on passera un flag ou une raison spécifique
-    const isFullRefund = reason && reason.includes('Trajet annulé par la conductrice');
-    await this.processRefund(isFullRefund ? 1.0 : 0.8);
+    const isFullRefund = reason && (reason.includes('Trajet annulé par la conductrice') || userId.toString() === this.driver.toString());
+
+    let refundPercent = 1.0;
+
+    if (!isFullRefund) {
+      // Calculer le délai si c'est la passagère qui annule
+      const Trip = mongoose.model('Trip');
+      const trip = await Trip.findById(this.trip);
+
+      if (trip) {
+        const now = new Date();
+        const departure = new Date(trip.departureDateTime);
+        const differenceInHours = (departure - now) / (1000 * 60 * 60);
+
+        // Moins de 24h : 50% de remboursement (Case P4)
+        // Plus de 24h : 80% de remboursement (Case P3)
+        refundPercent = differenceInHours < 24 ? 0.5 : 0.8;
+        console.log(`⏱️ Time to departure: ${differenceInHours.toFixed(1)}h. Refund percent: ${refundPercent * 100}%`);
+      } else {
+        refundPercent = 0.8; // Fallback standard
+      }
+    }
+
+    await this.processRefund(refundPercent);
   }
 
   await this.save();
