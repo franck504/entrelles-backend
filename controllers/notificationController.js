@@ -6,6 +6,7 @@ const Notification = require('../models/Notification');
 const getNotifications = async (req, res) => {
     try {
         const notifications = await Notification.find({ recipient: req.user.id })
+            .populate('sender', 'profile.displayName profile.avatar')
             .sort({ createdAt: -1 })
             .limit(50);
 
