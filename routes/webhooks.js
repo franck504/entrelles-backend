@@ -290,7 +290,8 @@ const handlePaymentSucceeded = async (paymentIntent) => {
         const booking = await Booking.findById(bookingId);
         if (!booking) return;
 
-        // Confirmer le paiement
+        // Confirmer le paiement et assurer que l'ID est sauvegardé
+        booking.payment.stripePaymentIntentId = paymentIntent.id;
         booking.payment.status = 'succeeded';
         booking.payment.paidAt = new Date();
         booking.status = 'paid';
@@ -421,6 +422,7 @@ const handlePaymentRequiresAction = async (paymentIntent) => {
         const booking = await Booking.findById(bookingId);
         if (!booking) return;
 
+        booking.payment.stripePaymentIntentId = paymentIntent.id;
         booking.payment.status = 'requires_action';
         booking.payment.actionRequired = true;
 
