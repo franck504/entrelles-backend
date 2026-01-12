@@ -18,6 +18,7 @@ const notificationSchema = new mongoose.Schema({
             'booking_confirmed',
             'booking_rejected',
             'booking_cancelled',
+            'trip_cancelled',
             'new_message',
             'payment_succeeded',
             'system'
@@ -34,6 +35,10 @@ const notificationSchema = new mongoose.Schema({
     },
     relatedId: {
         type: String, // ID related to the notification (tripId, bookingId, etc.)
+    },
+    data: {
+        type: Object, // Stores flexible metadata
+        default: {}
     },
     isRead: {
         type: Boolean,

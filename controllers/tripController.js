@@ -401,10 +401,11 @@ const cancelTrip = async (req, res) => {
       // Créer une notification pour chaque passagère
       if (booking.passenger) {
         await Notification.create({
-          user: booking.passenger._id,
+          recipient: booking.passenger._id,
           type: 'trip_cancelled',
           title: 'Trajet annulé',
           message: `Le trajet ${trip.departure.city} → ${trip.arrival.city} a été annulé. Raison: ${reason || 'Non spécifiée'}`,
+          relatedId: trip._id.toString(),
           data: { tripId: trip._id, bookingId: booking._id, reason }
         });
       }
