@@ -312,7 +312,13 @@ bookingSchema.methods.processRefund = async function (percent = 0.8) {
     console.log('🔍 Processing refund for booking:', this._id);
 
     if (!this.payment.stripePaymentIntentId) {
-      throw new Error('No payment to refund');
+      console.warn('⚠️ Warning: No Stripe payment intent ID found. Skipping Stripe refund but marking booking as cancelled.');
+      console.warn('   This may happen if the booking was marked as paid manually or if the payment webhook was not processed properly.');
+
+      // Still update the local payment status
+      this.payment.status = 'refunded';
+      this.payment.refundedAt = new Date();
+      return this; // Return early without calling Stripe
     }
 
     // ✅ Calcul des montants
