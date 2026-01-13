@@ -13,6 +13,8 @@ router.post('/create-trip-checkout', protect, paymentController.createTripChecko
 
 // Statut Financier Conductrice
 router.get('/driver/financial-status', protect, paymentController.getDriverFinancialStatus);
+router.get('/balance', protect, paymentController.getWalletBalance);
+router.get('/payouts', protect, paymentController.getWalletPayouts);
 
 module.exports = router;
 

@@ -128,27 +128,27 @@ const handleStripeWebhook = async (req, res) => {
 
             // 🏦 === VIREMENTS CONDUCTRICE ===
             case 'payout.created':
-                await handlePayoutCreated(event.data.object);
+                await handlePayoutCreated(event.data.object, event.account);
                 break;
 
             case 'payout.updated':
-                await handlePayoutUpdated(event.data.object);
+                await handlePayoutUpdated(event.data.object, event.account);
                 break;
 
             case 'payout.paid':
-                await handlePayoutPaid(event.data.object);
+                await handlePayoutPaid(event.data.object, event.account);
                 break;
 
             case 'payout.failed':
-                await handlePayoutFailed(event.data.object);
+                await handlePayoutFailed(event.data.object, event.account);
                 break;
 
             case 'transfer.created':
-                await handleTransferCreated(event.data.object);
+                await handleTransferCreated(event.data.object, event.account);
                 break;
 
             case 'transfer.updated':
-                await handleTransferUpdated(event.data.object);
+                await handleTransferUpdated(event.data.object, event.account);
                 break;
 
             case 'account.updated':
@@ -780,14 +780,24 @@ const handleCustomerUpdated = async (customer) => {
 // 🏦 === FONCTIONS VIREMENTS CONDUCTRICE ===
 
 // 🆕 NOUVEAU : Virement créé
-const handlePayoutCreated = async (payout) => {
+const handlePayoutCreated = async (payout, accountId) => {
     try {
-        console.log('🏦 Payout created:', payout.id);
+        console.log(`🏦 Payout created: ${payout.id} (Account: ${accountId})`);
 
-        // Trouver les réservations concernées par ce virement
-        const bookings = await Booking.find({
+        // Option 1: Trouver par ID de virement si déjà lié
+        let bookings = await Booking.find({
             'payment.driverPayout.stripePayoutId': payout.id
         });
+
+        // Option 2: S'il n'y a pas de lien direct (Virement automatique Stripe),
+        // on peut notifier l'utilisateur lié au compte Connect
+        if (bookings.length === 0 && accountId) {
+            const user = await User.findOne({ 'kyc.stripeConnectAccountId': accountId });
+            if (user) {
+                console.log(`📧 Notification needed for user ${user.email}: Nouveau virement créé`);
+                // TODO: Envoyer notification In-App / Email
+            }
+        }
 
         for (const booking of bookings) {
             booking.payment.driverPayout.status = 'created';
@@ -803,9 +813,9 @@ const handlePayoutCreated = async (payout) => {
 };
 
 // 🆕 NOUVEAU : Virement mis à jour
-const handlePayoutUpdated = async (payout) => {
+const handlePayoutUpdated = async (payout, accountId) => {
     try {
-        console.log('🏦 Payout updated:', payout.id, 'Status:', payout.status);
+        console.log(`🏦 Payout updated: ${payout.id} (Account: ${accountId}) Status: ${payout.status}`);
 
         const bookings = await Booking.find({
             'payment.driverPayout.stripePayoutId': payout.id
@@ -830,9 +840,9 @@ const handlePayoutUpdated = async (payout) => {
 };
 
 // 🆕 NOUVEAU : Virement payé
-const handlePayoutPaid = async (payout) => {
+const handlePayoutPaid = async (payout, accountId) => {
     try {
-        console.log('💰 Payout paid:', payout.id);
+        console.log(`💰 Payout paid: ${payout.id} (Account: ${accountId})`);
 
         const bookings = await Booking.find({
             'payment.driverPayout.stripePayoutId': payout.id
@@ -852,9 +862,9 @@ const handlePayoutPaid = async (payout) => {
 };
 
 // 🆕 NOUVEAU : Virement échoué
-const handlePayoutFailed = async (payout) => {
+const handlePayoutFailed = async (payout, accountId) => {
     try {
-        console.log('❌ Payout failed:', payout.id);
+        console.log(`❌ Payout failed: ${payout.id} (Account: ${accountId})`);
 
         const bookings = await Booking.find({
             'payment.driverPayout.stripePayoutId': payout.id
@@ -875,9 +885,9 @@ const handlePayoutFailed = async (payout) => {
 };
 
 // 🆕 NOUVEAU : Transfert créé
-const handleTransferCreated = async (transfer) => {
+const handleTransferCreated = async (transfer, accountId) => {
     try {
-        console.log('🔄 Transfer created:', transfer.id);
+        console.log(`🔄 Transfer created: ${transfer.id} (Account: ${accountId})`);
 
         // Lier le transfert aux réservations si nécessaire
         if (transfer.metadata && transfer.metadata.bookingId) {
@@ -894,9 +904,9 @@ const handleTransferCreated = async (transfer) => {
 };
 
 // 🆕 NOUVEAU : Transfert mis à jour
-const handleTransferUpdated = async (transfer) => {
+const handleTransferUpdated = async (transfer, accountId) => {
     try {
-        console.log('🔄 Transfer updated:', transfer.id);
+        console.log(`🔄 Transfer updated: ${transfer.id} (Account: ${accountId})`);
 
         const booking = await Booking.findOne({
             'payment.driverPayout.stripeTransferId': transfer.id

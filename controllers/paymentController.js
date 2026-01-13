@@ -343,10 +343,108 @@ const createCheckoutSession = async (req, res) => {
   }
 };
 
+// ✅ NOUVEAU : RÉCUPÉRER LE SOLDE DU PORTEFEUILLE (Format standardisé pour le Frontend)
+const getWalletBalance = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+
+    const kycStatus = user.getKycStatus();
+
+    // Valeurs par défaut si pas de compte Connect
+    let balanceData = {
+      available: 0,
+      pending: 0,
+      currency: 'eur'
+    };
+
+    if (kycStatus.hasConnectAccount) {
+      const stripeBalance = await stripe.balance.retrieve({
+        stripeAccount: kycStatus.connectAccountId
+      });
+
+      balanceData = {
+        available: stripeBalance.available.reduce((sum, bal) => sum + (bal.currency === 'eur' ? bal.amount / 100 : 0), 0),
+        pending: stripeBalance.pending.reduce((sum, bal) => sum + (bal.currency === 'eur' ? bal.amount / 100 : 0), 0),
+        currency: 'EUR'
+      };
+    }
+
+    // Récupérer aussi les dernières transactions pour le modèle Wallet
+    let transactions = [];
+    if (kycStatus.hasConnectAccount) {
+      const stripeTransactions = await stripe.balanceTransactions.list(
+        { limit: 10 },
+        { stripeAccount: kycStatus.connectAccountId }
+      );
+
+      transactions = stripeTransactions.data.map(tx => ({
+        id: tx.id,
+        amount: tx.amount / 100,
+        currency: tx.currency,
+        status: tx.status,
+        type: tx.type === 'payout' ? 'payout' : (tx.amount > 0 ? 'payment' : 'refund'),
+        date: new Date(tx.created * 1000),
+        description: tx.description
+      }));
+    }
+
+    res.json({
+      success: true,
+      data: {
+        balance: balanceData,
+        transactions: transactions
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error getWalletBalance:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la récupération du solde' });
+  }
+};
+
+// ✅ NOUVEAU : RÉCUPÉRER LES VIREMENTS
+const getWalletPayouts = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || !user.stripe?.connectAccountId) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const stripePayouts = await stripe.payouts.list(
+      { limit: 20 },
+      { stripeAccount: user.stripe.connectAccountId }
+    );
+
+    const formattedPayouts = stripePayouts.data.map(payout => ({
+      id: payout.id,
+      amount: payout.amount / 100,
+      currency: payout.currency,
+      status: payout.status,
+      date: new Date(payout.arrival_date * 1000),
+      created: new Date(payout.created * 1000),
+      description: `Virement vers ${payout.bank_account?.bank_name || 'compte bancaire'}`
+    }));
+
+    res.json({
+      success: true,
+      data: formattedPayouts
+    });
+
+  } catch (error) {
+    console.error('❌ Error getWalletPayouts:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la récupération des virements' });
+  }
+};
+
 // ✅ EXPORTS FINAUX - Endpoints Production Uniquement
 module.exports = {
   createCheckoutSession,           // Abonnement Premium via Stripe Checkout
   getSubscriptionStatus,           // Statut abonnement utilisateur
   createTripCheckoutSession,       // Paiement trajet via Stripe Checkout
-  getDriverFinancialStatus         // Statut financier conductrice (balance, KYC, virements)
+  getDriverFinancialStatus,        // Statut financier conductrice (complet)
+  getWalletBalance,                // Nouveau : Formaté pour le Wallet mobile
+  getWalletPayouts                 // Nouveau : Virements seuls
 };
