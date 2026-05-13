@@ -35,17 +35,41 @@ Le projet suit une architecture modulaire basée sur Node.js et Express :
 
 ### Configuration
 
-Créez un fichier `.env` à la racine :
+Créez un fichier `.env` à la racine en vous basant sur l'exemple ci-dessous. Assurez-vous que ce fichier est listé dans votre `.gitignore` pour éviter toute fuite de clés API.
 
 ```env
+# Serveur
 PORT=5000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:3001
+
+# Base de données
 MONGODB_URI=votre_uri_mongodb
+
+# Sécurité
 JWT_SECRET=votre_secret_jwt
-STRIPE_SECRET_KEY=votre_cle_stripe
-STRIPE_WEBHOOK_SECRET=votre_secret_webhook
+JWT_EXPIRE=7d
+
+# Stripe (Paiements et KYC)
+STRIPE_SECRET_KEY=sk_test...
+STRIPE_PUBLISHABLE_KEY=pk_test...
+STRIPE_WEBHOOK_SECRET=whsec...
+
+# Cartographie (OpenRouteService ou Google Maps)
+OPENROUTE_API_KEY=votre_cle_ors
+GOOGLE_MAPS_API_KEY=votre_cle_google
+
+# IA (Gemini)
 GEMINI_API_KEY=votre_cle_gemini
-CLOUDINARY_URL=votre_url_cloudinary
+
+# Stockage d'images (Cloudinary)
+CLOUDINARY_CLOUD_NAME=votre_nom
+CLOUDINARY_API_KEY=votre_cle
+CLOUDINARY_API_SECRET=votre_secret
 ```
+
+> [!IMPORTANT]
+> Ne partagez jamais vos clés privées (sk_..., whsec_...) sur des dépôts publics. Utilisez toujours des variables d'environnement.
 
 ### Démarrage
 

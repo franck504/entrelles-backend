@@ -1,17 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const {
-    getNotifications,
-    markAsRead,
-    markAllAsRead,
-    deleteAllNotifications
+  getNotifications,
+  markAsRead,
+  markAllAsRead
 } = require('../controllers/notificationController');
 const { protect } = require('../middleware/authMiddleware');
 
-// ✅ ROUTE PUBLIQUE
-router.delete('/delete-all', deleteAllNotifications);
-
-// Toutes les routes de notifications sont protégées
+/**
+ * Routes de gestion des notifications
+ */
 router.use(protect);
 
 router.get('/', getNotifications);

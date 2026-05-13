@@ -3,29 +3,18 @@ const router = express.Router();
 const mapsController = require('../controllers/mapsController');
 
 /**
- * @route   POST /api/maps/calculate-route
- * @desc    Calcule distance, durée et prix d'un trajet
- * @access  Public
+ * Routes pour les services de cartographie et d'itinéraires
  */
+
+// Calcul d'itinéraire (distance, durée, prix suggéré)
 router.post('/calculate-route', mapsController.calculateRoute);
+
+// Géocodage et géocodage inversé
 router.get('/geocode', mapsController.geocode);
 router.get('/reverse-geocode', mapsController.reverseGeocode);
 
-/**
- * @route   GET /api/maps/cache-stats
- * @desc    Statistiques du cache Google Maps
- * @access  Public
- */
+// Gestion du cache
 router.get('/cache-stats', mapsController.getCacheStats);
-
-/**
- * @route   DELETE /api/maps/cache
- * @desc    Vider le cache (debug)
- * @access  Private
- */
 router.delete('/cache', mapsController.clearCache);
 
 module.exports = router;
-
-
-// trigger redeploy

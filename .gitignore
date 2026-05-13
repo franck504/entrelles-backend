@@ -6,6 +6,9 @@ npm-debug.log*
 .env
 .env.local
 .env.production
+.env.*
+stripe.key
+secrets_recuperes.txt
 
 # Logs
 logs
