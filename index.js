@@ -6,16 +6,14 @@ const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const connectDB = require('./config/database');
+const { startPayoutScheduler } = require('./utils/payoutScheduler');
 
 const app = express();
-
-// ✅ AJOUTER après connectDB():
-const { startPayoutScheduler } = require('./utils/payoutScheduler');
 
 // Connexion à la base de données
 connectDB();
 
-// ✅ DÉMARRER LE SCHEDULER
+// Démarrage du planificateur de paiements (hors environnement de test)
 if (process.env.NODE_ENV !== 'test') {
   startPayoutScheduler();
 }
@@ -23,7 +21,7 @@ if (process.env.NODE_ENV !== 'test') {
 // Middleware de sécurité
 app.use(helmet());
 
-// CORS configuration
+// Configuration CORS
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3001',
   credentials: true,
@@ -31,28 +29,27 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Logging
+// Journalisation en mode développement
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// ✅ NOUVEAU : Middleware spécial pour webhooks (avant body parsing)
+// Middleware spécifique pour les webhooks Stripe (doit être avant le parsing JSON global)
 app.use('/api/webhooks', require('./routes/webhooks'));
 
-// Body parsing middleware (après webhooks)
+// Middlewares de parsing pour les requêtes JSON et URL-encoded
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// Routes de base
+// Point d'entrée de l'API
 app.get('/', (req, res) => {
   res.json({
-    message: '🚗 Entrelles API - Covoiturage féminin 😁😁😁😁😁😁',
+    message: 'Entrelles API - Service de covoiturage féminin',
     version: '1.0.0',
     status: 'active',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    // ✅ NOUVEAU : Infos paiement
     features: {
       payments: 'enabled',
       stripe: 'configured',
@@ -61,14 +58,13 @@ app.get('/', (req, res) => {
   });
 });
 
-// Health check
+// Endpoint de santé du système
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
-    // ✅ NOUVEAU : Vérification Stripe
     stripe: {
       configured: !!process.env.STRIPE_SECRET_KEY,
       webhookConfigured: !!process.env.STRIPE_WEBHOOK_SECRET
@@ -76,24 +72,20 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Vérifiez que cette ligne existe avec vos autres routes
+// Routes de l'API
 app.use('/api/kyc', require('./routes/kyc'));
-
-// Ajoutez avec vos autres routes (après les routes existantes)
 app.use('/api/users', require('./routes/users'));
-
-// Routes API existantes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/trips', require('./routes/trips'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/payments', require('./routes/payments'));
-app.use('/api/maps', require('./routes/maps')); // ✅ NOUVEAU: Google Maps
+app.use('/api/maps', require('./routes/maps'));
 app.use('/api/notifications', require('./routes/notifications'));
-app.use('/api/ai', require('./routes/ai')); // ✅ NOUVEAU: Assistant IA
+app.use('/api/ai', require('./routes/ai'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/messages', require('./routes/messages'));
 
-// Test database route
+// Route de test pour la connexion à la base de données
 app.get('/test-db', async (req, res) => {
   try {
     const mongoose = require('mongoose');
@@ -107,48 +99,46 @@ app.get('/test-db', async (req, res) => {
     };
 
     res.json({
-      message: 'Database connection test',
+      message: 'Test de connexion à la base de données',
       status: states[dbState],
       database: mongoose.connection.name,
       host: mongoose.connection.host
     });
   } catch (error) {
     res.status(500).json({
-      message: 'Database test failed',
+      message: 'Échec du test de connexion',
       error: error.message
     });
   }
 });
 
-// Middleware de gestion d'erreurs
+// Middleware global de gestion d'erreurs
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
-    message: 'Something went wrong!',
+    message: 'Une erreur interne est survenue',
     error: process.env.NODE_ENV === 'development' ? err.message : {}
   });
 });
 
-// Route 404
+// Gestion des routes non trouvées (404)
 app.use('*', (req, res) => {
   res.status(404).json({
-    message: 'Route not found',
+    message: 'Route non trouvée',
     path: req.originalUrl
   });
 });
 
 const PORT = process.env.PORT || 3000;
 
-// Pour Vercel, on exporte l'app
+// Exportation pour Vercel (Production) ou écoute locale
 if (process.env.NODE_ENV === 'production') {
   module.exports = app;
 } else {
-  // Pour le développement local
   app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔗 API URL: http://localhost:${PORT}`);
-    console.log(`💳 Stripe: ${process.env.STRIPE_SECRET_KEY ? '✅ Configured' : '❌ Not configured'}`);
-    console.log(`🔗 Webhook: ${process.env.STRIPE_WEBHOOK_SECRET ? '✅ Configured' : '❌ Not configured'}`);
+    console.log(`Serveur démarré sur le port ${PORT}`);
+    console.log(`Environnement : ${process.env.NODE_ENV || 'development'}`);
+    console.log(`URL de l'API : http://localhost:${PORT}`);
+    console.log(`Stripe : ${process.env.STRIPE_SECRET_KEY ? 'Configuré' : 'Non configuré'}`);
   });
 }
