@@ -5,17 +5,17 @@ const jwt = require('jsonwebtoken');
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: [true, 'Email is required'],
+    required: [true, 'Email requis'],
     unique: true,
     lowercase: true,
     match: [
       /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-      'Please provide a valid email'
+      'Veuillez fournir une adresse email valide'
     ]
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: [true, 'Mot de passe requis'],
     minlength: 6,
     select: false
   },
@@ -27,19 +27,19 @@ const userSchema = new mongoose.Schema({
   profile: {
     displayName: {
       type: String,
-      required: [true, 'Display name is required'],
+      required: [true, 'Nom d\'affichage requis'],
       trim: true,
-      maxlength: [50, 'Display name cannot exceed 50 characters']
+      maxlength: [50, 'Le nom d\'affichage ne peut pas dépasser 50 caractères']
     },
     firstName: {
       type: String,
       trim: true,
-      maxlength: [30, 'First name cannot exceed 30 characters']
+      maxlength: [30, 'Le prénom ne peut pas dépasser 30 caractères']
     },
     lastName: {
       type: String,
       trim: true,
-      maxlength: [30, 'Last name cannot exceed 30 characters']
+      maxlength: [30, 'Le nom ne peut pas dépasser 30 caractères']
     },
     avatar: {
       type: String,
@@ -55,18 +55,18 @@ const userSchema = new mongoose.Schema({
     },
     bio: {
       type: String,
-      maxlength: [500, 'Bio cannot exceed 500 characters']
+      maxlength: [500, 'La biographie ne peut pas dépasser 500 caractères']
     },
     dateOfBirth: Date,
     gender: {
       type: String,
-      required: [true, 'Gender is required'],
+      required: [true, 'Genre requis'],
       enum: ['femme'],
       lowercase: true
     },
     phone: {
       type: String,
-      match: [/^[\+]?[0-9]{10,15}$/, 'Please provide a valid phone number']
+      match: [/^[\+]?[0-9]{10,15}$/, 'Veuillez fournir un numéro de téléphone valide']
     },
     address: {
       street: String,
@@ -131,8 +131,8 @@ const userSchema = new mongoose.Schema({
     },
     year: {
       type: Number,
-      min: [1990, 'Vehicle year must be 1990 or later'],
-      max: [new Date().getFullYear() + 1, 'Vehicle year cannot be in the future']
+      min: [1990, 'L\'année du véhicule doit être 1990 ou plus'],
+      max: [new Date().getFullYear() + 1, 'L\'année du véhicule ne peut pas être dans le futur']
     },
     licensePlate: {
       type: String,
@@ -267,24 +267,24 @@ const userSchema = new mongoose.Schema({
     accountHolderName: {
       type: String,
       trim: true,
-      maxlength: [100, 'Account holder name cannot exceed 100 characters']
+      maxlength: [100, 'Le nom du titulaire ne peut pas dépasser 100 caractères']
     },
     iban: {
       type: String,
       trim: true,
       uppercase: true,
-      match: [/^[A-Z]{2}[0-9]{2}[A-Z0-9]{4}[0-9]{7}([A-Z0-9]?){0,16}$/, 'Please provide a valid IBAN']
+      match: [/^[A-Z]{2}[0-9]{2}[A-Z0-9]{4}[0-9]{7}([A-Z0-9]?){0,16}$/, 'IBAN invalide']
     },
     bic: {
       type: String,
       trim: true,
       uppercase: true,
-      match: [/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/, 'Please provide a valid BIC']
+      match: [/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/, 'BIC invalide']
     },
     bankName: {
       type: String,
       trim: true,
-      maxlength: [100, 'Bank name cannot exceed 100 characters']
+      maxlength: [100, 'Le nom de la banque ne peut pas dépasser 100 caractères']
     },
     isVerified: {
       type: Boolean,
@@ -338,17 +338,18 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Méthodes de gestion de l'abonnement
 userSchema.methods.hasActiveSubscription = function () {
   return this.subscription.status === 'active' &&
     this.subscription.currentPeriodEnd > new Date();
 };
 
 userSchema.methods.canCreateTrips = function () {
-  return this.hasActiveSubscription(); // ✅ STRICT - plus de plan gratuit
+  return this.hasActiveSubscription();
 };
 
 userSchema.methods.canMakeBookings = function () {
-  return this.hasActiveSubscription(); // ✅ STRICT pour réservations
+  return this.hasActiveSubscription();
 };
 
 userSchema.methods.getSubscriptionStatus = function () {
@@ -367,6 +368,7 @@ userSchema.methods.getSubscriptionStatus = function () {
   return 'inactive';
 };
 
+// Indexation pour les performances
 userSchema.index({ email: 1 });
 userSchema.index({ googleId: 1 });
 userSchema.index({ 'profile.phone': 1 });
@@ -375,6 +377,7 @@ userSchema.index({ 'subscription.stripeCustomerId': 1 });
 userSchema.index({ 'subscription.stripeSubscriptionId': 1 });
 userSchema.index({ 'subscription.status': 1 });
 
+// Middleware pre-save pour le hachage du mot de passe
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     next();
@@ -385,10 +388,12 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
+// Comparaison de mots de passe
 userSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
+// Génération de token JWT
 userSchema.methods.generateAuthToken = function () {
   return jwt.sign(
     { userId: this._id },
@@ -397,6 +402,7 @@ userSchema.methods.generateAuthToken = function () {
   );
 };
 
+// Gestion du verrouillage de compte
 userSchema.methods.isLocked = function () {
   return !!(this.security.lockUntil && this.security.lockUntil > Date.now());
 };
@@ -431,42 +437,11 @@ userSchema.methods.resetLoginAttempts = function () {
   });
 };
 
-// ✅ NOUVELLES MÉTHODES KYC À AJOUTER
-
-
-// Méthode pour vérifier si l'utilisateur peut créer des trajets payants
-userSchema.methods.canCreatePaidTrips = function () {
-  const kycStatus = this.getKycStatus();
-  return kycStatus.canReceivePayments;
-};
-
-// Méthode pour vérifier si l'utilisateur peut recevoir des virements
-userSchema.methods.canReceivePayouts = function () {
-  return this.stripe?.payoutsEnabled === true &&
-    this.kyc?.status === 'verified';
-};
-
-// Méthode pour obtenir le prochain lien d'onboarding valide
-userSchema.methods.getValidOnboardingLink = function () {
-  if (!this.kyc?.onboardingLinks || this.kyc.onboardingLinks.length === 0) {
-    return null;
-  }
-
-  // Trouver le lien le plus récent non utilisé et non expiré
-  const now = new Date();
-  const validLink = this.kyc.onboardingLinks
-    .filter(link => !link.used && link.expiresAt > now)
-    .sort((a, b) => b.createdAt - a.createdAt)[0];
-
-  return validLink || null;
-};
-
-// ✅ CORRIGER la méthode getKycStatus
+// Méthodes liées au KYC et paiements Stripe
 userSchema.methods.getKycStatus = function () {
   const hasConnectAccount = !!(this.kyc && this.kyc.stripeConnectAccountId);
   const kycStatus = this.kyc ? this.kyc.status : 'not_started';
 
-  // ✅ CORRECTION : Vérifier aussi que le statut est 'verified'
   const canReceivePayments = hasConnectAccount &&
     kycStatus === 'verified' &&
     this.kyc.canReceivePayments === true;

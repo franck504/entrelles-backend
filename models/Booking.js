@@ -88,12 +88,10 @@ const bookingSchema = new mongoose.Schema({
     },
     reviewedAt: Date
   },
-
-  // ✅ SECTION PAYMENT COMPLÈTE AVEC 'paid' AJOUTÉ
   payment: {
     stripePaymentIntentId: String,
     stripeChargeId: String,
-    stripeClientSecret: String, // ✅ AJOUTÉ
+    stripeClientSecret: String,
     amount: {
       type: Number,
       default: 0
@@ -104,7 +102,7 @@ const bookingSchema = new mongoose.Schema({
     },
     status: {
       type: String,
-      enum: ['pending', 'processing', 'succeeded', 'failed', 'canceled', 'refunded', 'paid'], // ✅ AJOUT 'paid'
+      enum: ['pending', 'processing', 'succeeded', 'failed', 'canceled', 'refunded', 'paid'],
       default: 'pending'
     },
     driverAmount: {
@@ -115,7 +113,6 @@ const bookingSchema = new mongoose.Schema({
       type: Number,
       default: 0
     },
-    // ✅ PROPRIÉTÉS MANQUANTES AJOUTÉES :
     commission: {
       appFee: { type: Number, default: 0 },
       driverAmount: { type: Number, default: 0 },
@@ -123,17 +120,20 @@ const bookingSchema = new mongoose.Schema({
       totalAmount: { type: Number, default: 0 }
     },
     driverPayout: {
-      status: ['pending', 'scheduled', 'paid', 'failed'],
+      status: {
+        type: String,
+        enum: ['pending', 'scheduled', 'paid', 'failed', 'cancelled'],
+        default: 'pending'
+      },
       amount: Number,
       scheduledDate: Date,
       paidAt: Date,
       failureReason: String,
-      // ✅ NOUVEAUX CHAMPS STRIPE CONNECT:
-      stripeConnectAccountId: String,  // Compte destination
-      stripePayoutId: String,          // ID du virement
-      stripeTransferId: String,        // ID du transfert
-      payoutDate: Date,                // Date réelle du virement
-      transferDate: Date               // Date réelle du transfert
+      stripeConnectAccountId: String,
+      stripePayoutId: String,
+      stripeTransferId: String,
+      payoutDate: Date,
+      transferDate: Date
     },
     refundId: String,
     refundAmount: { type: Number, default: 0 },
@@ -143,7 +143,6 @@ const bookingSchema = new mongoose.Schema({
     receiptUrl: String
   },
   paymentDeadline: Date,
-
   metadata: {
     userAgent: String,
     ipAddress: String,
@@ -153,12 +152,11 @@ const bookingSchema = new mongoose.Schema({
       default: 'web'
     }
   }
-},
-  {
-    timestamps: true
-  });
+}, {
+  timestamps: true
+});
 
-// ✅ NOUVEAUX INDEX POUR PAIEMENTS
+// Indexation pour les paiements et recherches
 bookingSchema.index({ trip: 1, passenger: 1 });
 bookingSchema.index({ driver: 1, status: 1 });
 bookingSchema.index({ passenger: 1, status: 1 });
@@ -167,37 +165,16 @@ bookingSchema.index({ 'payment.stripePaymentIntentId': 1 });
 bookingSchema.index({ 'payment.status': 1 });
 bookingSchema.index({ 'payment.driverPayout.status': 1 });
 
-// ✅ NOUVELLES MÉTHODES PAIEMENT
-
-// Calculer la commission basée sur la distance
+// Calcul de la commission et des montants
 bookingSchema.methods.calculateCommission = function (distance) {
-  console.log('🔍 Calculating commission for distance:', distance, 'km, seats:', this.numberOfSeats);
-
-  // Calculs exacts en euros
   const exactTotal = this.numberOfSeats * distance * 0.55;
   const exactDriverAmount = this.numberOfSeats * distance * 0.45;
   const exactAppFee = this.numberOfSeats * distance * 0.10;
 
-  // Arrondir VERS LE HAUT en centimes (aucune perte pour les parties prenantes)
   const totalAmount = Math.ceil(exactTotal * 100);
   const driverAmount = Math.ceil(exactDriverAmount * 100);
   const appFee = Math.ceil(exactAppFee * 100);
-  const processingFee = Math.ceil(totalAmount * 0.029 + 25); // 2.9% + 0.25€
-
-  console.log('💰 Commission calculated (NO LOSS):', {
-    exactCalculations: {
-      total: exactTotal.toFixed(2) + '€',
-      driver: exactDriverAmount.toFixed(2) + '€',
-      commission: exactAppFee.toFixed(2) + '€'
-    },
-    finalAmounts: {
-      totalAmount: totalAmount / 100 + '€',
-      driverAmount: driverAmount / 100 + '€',
-      appFee: appFee / 100 + '€',
-      processingFee: processingFee / 100 + '€'
-    },
-    stripeAmount: totalAmount + ' centimes (valid integer)'
-  });
+  const processingFee = Math.ceil(totalAmount * 0.029 + 25);
 
   return {
     appFee,
@@ -207,26 +184,20 @@ bookingSchema.methods.calculateCommission = function (distance) {
   };
 };
 
-// Créer un PaymentIntent Stripe
+// Intégration Stripe : Création de PaymentIntent
 bookingSchema.methods.createPaymentIntent = async function (distance) {
   const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
   try {
-    console.log('🔍 Creating PaymentIntent for booking:', this._id);
-
-    // ✅ NOUVEAU : Populer les données utilisateur
     await this.populate([
       { path: 'passenger', select: 'email profile.displayName stripe.customerId' },
       { path: 'trip', select: 'departure arrival distance' }
     ]);
 
     const commission = this.calculateCommission(distance);
-
-    // ✅ NOUVEAU : Gérer le customer Stripe
     let customerId = this.passenger.stripe?.customerId;
 
     if (!customerId) {
-      console.log('👤 Creating customer for passenger:', this.passenger.email);
       const customer = await stripe.customers.create({
         email: this.passenger.email,
         name: this.passenger.profile.displayName,
@@ -235,23 +206,17 @@ bookingSchema.methods.createPaymentIntent = async function (distance) {
           type: 'passenger'
         }
       });
-
       customerId = customer.id;
-
-      // Sauvegarder le customer ID
       const User = require('./User');
-      await User.findByIdAndUpdate(this.passenger._id, {
-        'stripe.customerId': customerId
-      });
+      await User.findByIdAndUpdate(this.passenger._id, { 'stripe.customerId': customerId });
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: commission.totalAmount,
       currency: 'eur',
-      customer: customerId, // ✅ NOUVEAU : Lier au customer
-      receipt_email: this.passenger.email, // ✅ NOUVEAU : Email pour reçu
+      customer: customerId,
+      receipt_email: this.passenger.email,
       description: `Trajet ${this.trip.departure.city} → ${this.trip.arrival.city}`,
-      // ✅ NOUVEAU : Désactiver redirections
       automatic_payment_methods: {
         enabled: true,
         allow_redirects: 'never'
@@ -260,13 +225,10 @@ bookingSchema.methods.createPaymentIntent = async function (distance) {
         bookingId: this._id.toString(),
         tripId: this.trip._id.toString(),
         passengerId: this.passenger._id.toString(),
-        driverId: this.driver._id.toString(),
-        passengerEmail: this.passenger.email,
-        passengerName: this.passenger.profile.displayName
+        driverId: this.driver._id.toString()
       }
     });
 
-    // Sauvegarder les infos de paiement
     this.payment.stripePaymentIntentId = paymentIntent.id;
     this.payment.stripeClientSecret = paymentIntent.client_secret;
     this.payment.amount = commission.totalAmount;
@@ -274,262 +236,152 @@ bookingSchema.methods.createPaymentIntent = async function (distance) {
     this.payment.status = 'processing';
 
     await this.save();
-
-    console.log('✅ PaymentIntent created with customer:', customerId);
     return paymentIntent;
-
   } catch (error) {
-    console.error('❌ Error creating payment intent:', error);
+    console.error('Erreur lors de la création du PaymentIntent:', error);
     throw error;
   }
 };
 
-// Confirmer le paiement après succès
+// Confirmation du paiement
 bookingSchema.methods.confirmPayment = async function () {
-  console.log('🔍 Confirming payment for booking:', this._id);
-
   this.payment.status = 'succeeded';
   this.payment.paidAt = new Date();
   this.status = 'confirmed';
   this.confirmedAt = new Date();
 
-  // Programmer le virement conductrice (7 jours après paiement)
   this.payment.driverPayout.status = 'scheduled';
   this.payment.driverPayout.amount = this.payment.commission.driverAmount;
   this.payment.driverPayout.scheduledDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   await this.save();
-
-  console.log('✅ Payment confirmed, driver payout scheduled for:', this.payment.driverPayout.scheduledDate);
   return this;
 };
 
-// Traiter un remboursement (par défaut 80% si passagère annule, 100% si trajet annulé)
+// Gestion des remboursements (80% passager, 100% conducteur/trajet annulé)
 bookingSchema.methods.processRefund = async function (percent = 0.8) {
   const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
   try {
-    console.log('🔍 Processing refund for booking:', this._id);
-
     if (!this.payment.stripePaymentIntentId) {
-      console.warn('⚠️ Warning: No Stripe payment intent ID found. Skipping Stripe refund but marking booking as cancelled.');
-      console.warn('   This may happen if the booking was marked as paid manually or if the payment webhook was not processed properly.');
-
-      // Still update the local payment status
       this.payment.status = 'refunded';
       this.payment.refundedAt = new Date();
-      return this; // Return early without calling Stripe
+      return this;
     }
 
-    // ✅ Calcul des montants
-    const totalAmount = this.payment.amount; // Montant en centimes
+    const totalAmount = this.payment.amount;
     const refundAmount = Math.floor(totalAmount * percent);
-
-    // Les frais plateforme et conductrice sont calculés sur le reste
     const remaining = totalAmount - refundAmount;
-    const platformFee = percent === 1.0 ? 0 : Math.floor(remaining * 0.5);
-    const driverFee = percent === 1.0 ? 0 : (remaining - platformFee);
+    const driverFee = percent === 1.0 ? 0 : Math.floor(remaining * 0.5);
 
-    console.log('💰 Cancellation fees breakdown:', {
-      total: totalAmount / 100 + '€',
-      refundToPassenger: refundAmount / 100 + '€ (' + (percent * 100) + '%)',
-      platformKeeps: platformFee / 100 + '€',
-      driverKeeps: driverFee / 100 + '€'
-    });
-
-    // Créer le remboursement
     const refund = await stripe.refunds.create({
       payment_intent: this.payment.stripePaymentIntentId,
       amount: refundAmount,
-      reason: percent === 1.0 ? 'requested_by_customer' : 'requested_by_customer', // Stripe reasons are limited
+      reason: 'requested_by_customer',
       metadata: {
         bookingId: this._id.toString(),
-        type: percent === 1.0 ? 'trip_cancellation_by_driver' : 'booking_cancellation_by_passenger',
-        refundPercent: (percent * 100).toString(),
-        platformFee: platformFee.toString(),
-        driverFee: driverFee.toString()
+        refundPercent: (percent * 100).toString()
       }
     });
 
-    // Mettre à jour les informations de paiement
     this.payment.refundId = refund.id;
     this.payment.refundedAt = new Date();
     this.payment.refundAmount = refundAmount;
     this.payment.status = 'refunded';
 
-    // ✅ Ajuster le payout de la conductrice
     if (this.payment.driverPayout.status !== 'paid') {
       if (percent === 1.0) {
-        // Annulation complète, pas de payout
         this.payment.driverPayout.amount = 0;
         this.payment.driverPayout.status = 'cancelled';
-        console.log('💳 Driver payout cancelled (full refund)');
       } else {
-        // La conductrice garde sa part des frais
         this.payment.driverPayout.amount = driverFee;
         this.payment.driverPayout.status = 'scheduled';
-        console.log('💳 Driver keeps cancellation fee:', driverFee / 100 + '€');
       }
     }
 
     await this.save();
-
-    console.log('✅ Partial refund (80%) processed:', refund.id);
-    console.log('💰 Platform keeps:', platformFee / 100 + '€');
-    console.log('💰 Driver keeps:', driverFee / 100 + '€');
-
     return refund;
-
   } catch (error) {
-    console.error('❌ Error processing refund:', error);
+    console.error('Erreur lors du traitement du remboursement:', error);
     throw error;
   }
 };
 
-// ✅ MÉTHODES EXISTANTES MODIFIÉES
-
-// Annuler une réservation (avec gestion remboursement)
+// Annulation d'une réservation
 bookingSchema.methods.cancel = async function (userId, reason) {
-  if (this.status === 'completed') {
-    throw new Error('Cannot cancel a completed booking');
+  if (this.status === 'completed' || this.status === 'cancelled') {
+    throw new Error('Action impossible sur cette réservation');
   }
-
-  if (this.status === 'cancelled') {
-    throw new Error('Booking is already cancelled');
-  }
-
-  console.log('🔍 Cancelling booking:', this._id, 'by user:', userId);
 
   this.status = 'cancelled';
   this.cancelledAt = new Date();
   this.cancelledBy = userId;
   this.cancellationReason = reason;
 
-  // ✅ NOUVEAU : Gérer remboursement automatique si payé
   if (this.payment.status === 'succeeded') {
-    console.log('💰 Processing automatic refund...');
-    // Si c'est le conducteur qui annule ou si le trajet est annulé, 100% de remboursement
     const isFullRefund = reason && (reason.includes('Trajet annulé par la conductrice') || userId.toString() === this.driver.toString());
-
     let refundPercent = 1.0;
 
     if (!isFullRefund) {
-      // Calculer le délai si c'est la passagère qui annule
       const Trip = mongoose.model('Trip');
       const trip = await Trip.findById(this.trip);
-
       if (trip) {
-        const now = new Date();
-        const departure = new Date(trip.departureDateTime);
-        const differenceInHours = (departure - now) / (1000 * 60 * 60);
-
-        // Moins de 24h : 50% de remboursement (Case P4)
-        // Plus de 24h : 80% de remboursement (Case P3)
-        refundPercent = differenceInHours < 24 ? 0.5 : 0.8;
-        console.log(`⏱️ Time to departure: ${differenceInHours.toFixed(1)}h. Refund percent: ${refundPercent * 100}%`);
-      } else {
-        refundPercent = 0.8; // Fallback standard
+        const diffHours = (new Date(trip.departureDateTime) - new Date()) / (1000 * 60 * 60);
+        refundPercent = diffHours < 24 ? 0.5 : 0.8;
       }
     }
-
     await this.processRefund(refundPercent);
   }
 
   await this.save();
-  console.log('✅ Booking cancelled successfully');
   return this;
 };
 
-// Marquer comme terminé
+// Marquage comme terminé
 bookingSchema.methods.complete = async function () {
-  if (this.status !== 'confirmed') {
-    throw new Error('Only confirmed bookings can be completed');
-  }
-
+  if (this.status !== 'confirmed') throw new Error('Seule une réservation confirmée peut être terminée');
   this.status = 'completed';
   this.completedAt = new Date();
-
   await this.save();
   return this;
 };
 
-// Ajouter une évaluation (CONSERVÉE)
+// Ajout d'une évaluation
 bookingSchema.methods.addReview = async function (rating, comment) {
-  console.log('🔍 Starting addReview method...');
-
-  if (this.status !== 'completed') {
-    throw new Error('Can only review completed trips');
+  if (this.status !== 'completed' || (this.review && this.review.rating)) {
+    throw new Error('Évaluation impossible');
   }
 
-  if (this.review && this.review.rating) {
-    throw new Error('Review already exists for this booking');
-  }
-
-  this.review = {
-    rating: rating,
-    comment: comment || '',
-    reviewedAt: new Date()
-  };
-
-  console.log('✅ Review added to booking');
+  this.review = { rating, comment: comment || '', reviewedAt: new Date() };
   await this.save();
-  console.log('✅ Booking saved with review');
 
   try {
-    console.log('🔍 Updating driver rating...');
     const User = mongoose.model('User');
     const driver = await User.findById(this.driver);
+    if (driver) {
+      const currentRating = driver.stats.rating || 0;
+      const currentCount = driver.stats.ratingsCount || 0;
+      const newCount = currentCount + 1;
+      const newRating = ((currentRating * currentCount) + rating) / newCount;
 
-    if (!driver) {
-      console.log('⚠️ Driver not found, skipping rating update');
-      return this;
-    }
-
-    console.log('✅ Driver found:', driver.profile.displayName);
-    const currentRating = driver.stats.rating || 0;
-    const currentCount = driver.stats.ratingsCount || 0;
-    const newCount = currentCount + 1;
-    const newRating = ((currentRating * currentCount) + rating) / newCount;
-
-    const updateResult = await User.findByIdAndUpdate(
-      this.driver,
-      {
+      await User.findByIdAndUpdate(this.driver, {
         $set: {
           'stats.rating': Math.round(newRating * 10) / 10,
           'stats.ratingsCount': newCount
         }
-      },
-      { new: true }
-    );
-
-    if (updateResult) {
-      console.log(`✅ Driver rating updated: ${updateResult.stats.rating} (${newCount} reviews)`);
-    } else {
-      console.log('⚠️ Failed to update driver rating');
+      });
     }
-
   } catch (error) {
-    console.error('❌ Error updating driver rating:', error.message);
+    console.error('Erreur lors de la mise à jour de la note du conducteur:', error);
   }
 
-  console.log('✅ addReview method completed successfully');
   return this;
 };
 
-// ✅ MÉTHODES STATIQUES CONSERVÉES
-
+// Méthodes statiques pour la récupération des réservations
 bookingSchema.statics.getBookingsByUser = function (userId, status = null) {
-  let query = {
-    $or: [
-      { passenger: userId },
-      { driver: userId }
-    ]
-  };
-
-  if (status) {
-    query.status = status;
-  }
-
+  let query = { $or: [{ passenger: userId }, { driver: userId }] };
+  if (status) query.status = status;
   return this.find(query)
     .populate('trip', 'departure arrival departureDateTime pricePerSeat')
     .populate('passenger', 'profile.displayName profile.avatar')
@@ -537,104 +389,46 @@ bookingSchema.statics.getBookingsByUser = function (userId, status = null) {
     .sort({ requestedAt: -1 });
 };
 
-bookingSchema.statics.getUpcomingBookings = function (userId) {
-  const now = new Date();
-
-  return this.find({
-    $or: [
-      { passenger: userId },
-      { driver: userId }
-    ],
-    status: { $in: ['confirmed', 'pending'] }
-  })
-    .populate({
-      path: 'trip',
-      match: { departureDateTime: { $gte: now } },
-      select: 'departure arrival departureDateTime pricePerSeat status'
-    })
-    .populate('passenger', 'profile.displayName profile.avatar')
-    .populate('driver', 'profile.displayName profile.avatar')
-    .sort({ 'trip.departureDateTime': 1 });
-};
-
-// ✅ MIDDLEWARE PRE-SAVE ÉTENDU
-
+// Middleware pre-save pour initialiser le montant du paiement
 bookingSchema.pre('save', function (next) {
-  // Validations existantes
-  if (this.numberOfSeats <= 0) {
-    next(new Error('Number of seats must be positive'));
+  if (this.totalPrice && !this.payment.amount) {
+    this.payment.amount = this.totalPrice * 100;
   }
-
-  if (this.totalPrice < 0) {
-    next(new Error('Total price cannot be negative'));
-  }
-
-  // ✅ NOUVEAU : Initialiser paiement si pas défini
-  if (!this.payment.amount && this.totalPrice) {
-    this.payment.amount = this.totalPrice * 100; // Convertir en centimes
-  }
-
   next();
 });
 
-// Middleware post-save (CONSERVÉ)
-bookingSchema.post('save', function (doc) {
-  console.log(`📧 Notification: Booking ${doc._id} status changed to ${doc.status}`);
-});
-
-// ✅ NOUVELLE MÉTHODE:
+// Exécution du virement planifié vers le conducteur
 bookingSchema.methods.executeScheduledPayout = async function () {
   const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
   try {
-    // 1. Récupérer le compte Connect du driver
     const Trip = require('./Trip');
-    const User = require('./User');
-
     const trip = await Trip.findById(this.trip).populate('driver');
     const driver = trip.driver;
 
-    if (!driver.kyc?.stripeConnectAccountId) {
-      throw new Error('Driver has no Connect account');
+    if (!driver.kyc?.stripeConnectAccountId || !driver.kyc?.canReceivePayments) {
+      throw new Error('Le conducteur n\'est pas configuré pour recevoir des paiements');
     }
 
-    if (!driver.kyc?.canReceivePayments) {
-      throw new Error('Driver cannot receive payments');
-    }
-
-    // 2. Créer le transfert vers le compte Connect
     const transfer = await stripe.transfers.create({
       amount: this.payment.driverPayout.amount,
       currency: 'eur',
       destination: driver.kyc.stripeConnectAccountId,
       description: `Paiement trajet ${trip.departure.city} → ${trip.arrival.city}`,
-      metadata: {
-        bookingId: this._id.toString(),
-        tripId: this.trip.toString(),
-        driverId: driver._id.toString(),
-        type: 'driver_payout'
-      }
+      metadata: { bookingId: this._id.toString(), type: 'driver_payout' }
     });
 
-    // 3. Mettre à jour le booking
     this.payment.driverPayout.stripeConnectAccountId = driver.kyc.stripeConnectAccountId;
     this.payment.driverPayout.stripeTransferId = transfer.id;
     this.payment.driverPayout.status = 'paid';
     this.payment.driverPayout.paidAt = new Date();
-    this.payment.driverPayout.transferDate = new Date();
 
     await this.save();
-
-    console.log('✅ Driver payout executed:', transfer.id);
     return transfer;
-
   } catch (error) {
-    // Marquer comme échoué
     this.payment.driverPayout.status = 'failed';
     this.payment.driverPayout.failureReason = error.message;
     await this.save();
-
-    console.error('❌ Driver payout failed:', error);
     throw error;
   }
 };

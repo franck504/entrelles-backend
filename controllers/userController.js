@@ -3,22 +3,19 @@ const Trip = require('../models/Trip');
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 
-// Configuration Cloudinary
+// Configuration Cloudinary pour l'hébergement des images
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Configuration Multer pour upload en mémoire
+// Configuration Multer pour la gestion des uploads en mémoire
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB max
-  },
+  limits: { fileSize: 5 * 1024 * 1024 }, // Limite de 5MB
   fileFilter: (req, file, cb) => {
-    console.log('�� Multer - Type de fichier:', file.mimetype);
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
@@ -27,28 +24,18 @@ const upload = multer({
   }
 });
 
-// @desc    Voir profil public d'une utilisatrice
-// @route   GET /api/users/:id
-// @access  Public
+/**
+ * @desc    Consulter le profil public d'une utilisatrice
+ * @route   GET /api/users/:id
+ * @access  Public
+ */
 const getPublicProfile = async (req, res) => {
   try {
-    console.log('🔍 Récupération profil public pour ID:', req.params.id);
-
     const user = await User.findById(req.params.id)
       .select('-password -security -stripe -kyc -bankingInfo -metadata.ipAddress -metadata.userAgent');
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisatrice non trouvée'
-      });
-    }
-
-    if (user.status !== 'active') {
-      return res.status(404).json({
-        success: false,
-        message: 'Profil non disponible'
-      });
+    if (!user || user.status !== 'active') {
+      return res.status(404).json({ success: false, message: 'Utilisatrice non trouvée ou profil non disponible' });
     }
 
     const publicProfile = {
@@ -75,168 +62,30 @@ const getPublicProfile = async (req, res) => {
         isPhoneVerified: user.verification.isPhoneVerified,
         isIdentityVerified: user.verification.isIdentityVerified
       },
-      lastActive: user.metadata.lastActive,
-      responseTime: user.stats.responseTime
+      lastActive: user.metadata.lastActive
     };
 
-    res.status(200).json({
-      success: true,
-      message: 'Profil public récupéré',
-      user: publicProfile
-    });
+    res.status(200).json({ success: true, user: publicProfile });
 
   } catch (error) {
-    console.error('❌ Erreur récupération profil public:', error);
-
-    if (error.name === 'CastError') {
-      return res.status(404).json({
-        success: false,
-        message: 'ID utilisateur invalide'
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
+    console.error('Erreur récupération profil public:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
-// @desc    Upload photo de profil
-// @route   POST /api/users/upload-avatar
-// @access  Private
-const uploadAvatar = async (req, res) => {
-  try {
-    console.log('🔍 Upload avatar - User ID:', req.user?.id);
-    console.log('🔍 Fichier reçu:', req.file ? 'OUI' : 'NON');
-
-    if (req.file) {
-      console.log('🔍 Détails fichier:', {
-        originalname: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size
-      });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'Aucune image fournie'
-      });
-    }
-
-    console.log('📸 Début upload vers Cloudinary...');
-
-    // Upload vers Cloudinary avec transformations
-    const uploadResult = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'entrelles/avatars',
-          public_id: `avatar_${req.user.id}_${Date.now()}`,
-          transformation: [
-            { width: 300, height: 300, crop: 'fill', gravity: 'face' },
-            { quality: 'auto', fetch_format: 'auto' }
-          ],
-          overwrite: true
-        },
-        (error, result) => {
-          if (error) {
-            console.error('❌ Erreur Cloudinary:', error);
-            reject(error);
-          } else {
-            console.log('✅ Upload Cloudinary réussi:', result.secure_url);
-            resolve(result);
-          }
-        }
-      );
-
-      uploadStream.end(req.file.buffer);
-    });
-
-    console.log('💾 Mise à jour base de données...');
-
-    // Mettre à jour l'avatar dans la base de données
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { 'profile.avatar': uploadResult.secure_url },
-      { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
-    }
-
-    console.log('✅ Avatar mis à jour avec succès');
-
-    res.status(200).json({
-      success: true,
-      message: 'Avatar mis à jour avec succès',
-      avatar: {
-        url: uploadResult.secure_url,
-        publicId: uploadResult.public_id,
-        width: uploadResult.width,
-        height: uploadResult.height
-      },
-      user: {
-        id: user._id,
-        email: user.email,
-        profile: user.profile,
-        verification: user.verification,
-        subscription: user.subscription,
-        stats: user.stats,
-        preferences: user.preferences,
-        createdAt: user.createdAt
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Erreur upload avatar:', error);
-
-    if (error.message && error.message.includes('File size')) {
-      return res.status(400).json({
-        success: false,
-        message: 'Fichier trop volumineux (max 5MB)'
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de l\'upload de l\'avatar',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
-
-module.exports = {
-  getPublicProfile,
-  uploadAvatar,
-  upload // Export du middleware multer
-};
-
-// @desc    Mettre à jour profil complet
-// @route   PUT /api/users/profile
-// @access  Private
+/**
+ * @desc    Mettre à jour le profil complet de l'utilisatrice
+ * @route   PUT /api/users/profile
+ * @access  Privé
+ */
 const updateCompleteProfile = async (req, res) => {
   try {
-    console.log('🔍 Mise à jour profil pour user:', req.user.id);
-    console.log('🔍 Données reçues:', req.body);
-
     const fieldsToUpdate = {};
+    const allowedProfileFields = ['displayName', 'firstName', 'lastName', 'phone', 'bio', 'dateOfBirth', 'address', 'profileImageUrl', 'vehicleImageUrl'];
 
-    // Champs profil autorisés
-    const allowedProfileFields = [
-      'displayName', 'firstName', 'lastName', 'phone', 'bio',
-      'dateOfBirth', 'address', 'profileImageUrl', 'vehicleImageUrl'
-    ];
-
-    // Mettre à jour les champs profil
     allowedProfileFields.forEach(field => {
       if (req.body[field] !== undefined) {
         if (field === 'address' && typeof req.body[field] === 'object') {
-          // Gestion spéciale pour l'adresse (objet)
           Object.keys(req.body[field]).forEach(addressField => {
             fieldsToUpdate[`profile.address.${addressField}`] = req.body[field][addressField];
           });
@@ -246,13 +95,8 @@ const updateCompleteProfile = async (req, res) => {
       }
     });
 
-    // Mettre à jour les préférences si fournies
     if (req.body.preferences && typeof req.body.preferences === 'object') {
-      const allowedPreferences = [
-        'allowSmoking', 'allowPets', 'allowFood', 'musicPreference',
-        'chatLevel', 'maxDetour', 'autoAcceptBookings'
-      ];
-
+      const allowedPreferences = ['allowSmoking', 'allowPets', 'allowFood', 'musicPreference', 'chatLevel', 'maxDetour', 'autoAcceptBookings'];
       allowedPreferences.forEach(pref => {
         if (req.body.preferences[pref] !== undefined) {
           fieldsToUpdate[`preferences.${pref}`] = req.body.preferences[pref];
@@ -260,205 +104,93 @@ const updateCompleteProfile = async (req, res) => {
       });
     }
 
-    // Validation : au moins un champ à mettre à jour
     if (Object.keys(fieldsToUpdate).length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Aucun champ valide à mettre à jour'
-      });
+      return res.status(400).json({ success: false, message: 'Aucun champ valide à mettre à jour' });
     }
 
-    console.log('🔍 Champs à mettre à jour:', fieldsToUpdate);
+    const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, { new: true, runValidators: true });
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
 
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      fieldsToUpdate,
-      {
-        new: true,
-        runValidators: true
-      }
-    );
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
-    }
-
-    console.log('✅ Profil mis à jour avec succès');
-
-    res.status(200).json({
-      success: true,
-      message: 'Profil mis à jour avec succès',
-      user: {
-        id: user._id,
-        email: user.email,
-        profile: user.profile,
-        preferences: user.preferences,
-        stats: user.stats,
-        verification: user.verification,
-        updatedAt: user.updatedAt
-      }
-    });
+    res.status(200).json({ success: true, message: 'Profil mis à jour avec succès', user });
 
   } catch (error) {
-    console.error('❌ Erreur mise à jour profil:', error);
-
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(err => ({
-        field: err.path,
-        message: err.message,
-        value: err.value
-      }));
-      return res.status(400).json({
-        success: false,
-        message: 'Erreurs de validation',
-        errors: messages
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la mise à jour du profil'
-    });
+    console.error('Erreur mise à jour profil:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la mise à jour du profil' });
   }
 };
 
-// @desc    Upload image utilisateur (profil ou véhicule)
-// @route   POST /api/users/upload-image
-// @access  Private
+/**
+ * @desc    Uploader une image pour le profil ou le véhicule
+ * @route   POST /api/users/upload-image
+ * @access  Privé
+ */
 const uploadUserImage = async (req, res) => {
   try {
-    const { type } = req.body; // 'profile' or 'vehicle'
-
+    const { type } = req.body;
     if (!['profile', 'vehicle'].includes(type)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Type d\'image invalide (doit être "profile" ou "vehicle")'
-      });
+      return res.status(400).json({ success: false, message: 'Type d\'image invalide' });
     }
 
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'Aucune image fournie'
-      });
-    }
+    if (!req.file) return res.status(400).json({ success: false, message: 'Aucune image fournie' });
 
     const folder = type === 'profile' ? 'entrelles/profile_images' : 'entrelles/vehicle_images';
     const field = type === 'profile' ? 'profile.profileImageUrl' : 'profile.vehicleImageUrl';
 
-    console.log('📸 Début upload vers Cloudinary pour type:', type);
-    console.log('🔍 Vérification config Cloudinary:', {
-      hasCloudName: !!process.env.CLOUDINARY_CLOUD_NAME,
-      hasApiKey: !!process.env.CLOUDINARY_API_KEY,
-      hasApiSecret: !!process.env.CLOUDINARY_API_SECRET
-    });
-
-    // Upload vers Cloudinary
     const uploadResult = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: folder,
           public_id: `${type}_${req.user.id}_${Date.now()}`,
-          transformation: [
-            { width: 800, height: 600, crop: 'limit' },
-            { quality: 'auto', fetch_format: 'auto' }
-          ],
+          transformation: [{ width: 800, height: 600, crop: 'limit' }, { quality: 'auto', fetch_format: 'auto' }],
           overwrite: true
         },
         (error, result) => {
-          if (error) {
-            console.error('❌ Erreur brute Cloudinary:', error);
-            reject(error);
-          } else {
-            console.log('✅ Upload Cloudinary réussi:', result.secure_url);
-            resolve(result);
-          }
+          if (error) reject(error);
+          else resolve(result);
         }
       );
       uploadStream.end(req.file.buffer);
     });
 
-    // Mettre à jour la base de données
     const updateData = {};
     updateData[field] = uploadResult.secure_url;
-
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      updateData,
-      { new: true }
-    );
+    const user = await User.findByIdAndUpdate(req.user.id, updateData, { new: true });
 
     res.status(200).json({
       success: true,
-      message: `Image de ${type === 'profile' ? 'profil' : 'véhicule'} mise à jour`,
+      message: 'Image mise à jour avec succès',
       imageUrl: uploadResult.secure_url,
-      user: {
-        id: user._id,
-        email: user.email,
-        profile: user.profile,
-        verification: user.verification,
-        subscription: user.subscription,
-        stats: user.stats,
-        preferences: user.preferences,
-        createdAt: user.createdAt
-      }
+      user
     });
 
   } catch (error) {
-    console.error(`❌ Erreur upload image détaillée:`, error);
-
-    // Si l'erreur vient de Cloudinary, elle contient souvent des infos utiles
-    const errorMessage = error.message || 'Erreur lors de l\'upload de l\'image';
-
-    res.status(500).json({
-      success: false,
-      message: errorMessage,
-      debug: process.env.NODE_ENV === 'development' ? error : undefined
-    });
+    console.error('Erreur upload image:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de l\'upload de l\'image' });
   }
 };
 
-// @desc    Récupérer les conductrices à proximité (même ville)
-// @route   GET /api/users/nearby-drivers
-// @access  Public
+/**
+ * @desc    Récupérer les conductrices à proximité ou actives
+ * @route   GET /api/users/nearby-drivers
+ * @access  Public
+ */
 const getNearbyDrivers = async (req, res) => {
   try {
     const { city } = req.query;
-
-    console.log('🔍 Recherche conductrices:', city ? `à proximité de ${city}` : 'toutes les conductrices');
-
-    // 1. Construire la requête de base
     const query = { status: 'active' };
+    if (city) query['profile.address.city'] = new RegExp(city, 'i');
 
-    // 2. Ajouter le filtre de ville si fourni
-    if (city) {
-      query['profile.address.city'] = new RegExp(city, 'i');
-    }
-
-    // 3. Trouver les utilisateurs (filtrées par ville ou toutes)
     const users = await User.find(query)
       .select('profile.displayName profile.avatar profile.profileImageUrl stats.rating stats.tripsAsDriver metadata.lastActive')
-      .sort({ 'metadata.lastActive': -1 }) // Les plus actives en premier
+      .sort({ 'metadata.lastActive': -1 })
       .limit(20)
       .lean();
 
-    if (!users || users.length === 0) {
-      return res.status(200).json({
-        success: true,
-        count: 0,
-        drivers: []
-      });
-    }
-
-    // 2. Pour chaque utilisatrice, vérifier si elle a un trajet actif
     const driversWithActivity = await Promise.all(users.map(async (user) => {
       const activeTrip = await Trip.findOne({
         driver: user._id,
         status: 'active',
-        departureDateTime: { $gt: new Date() } // Trajet futur
+        departureDateTime: { $gt: new Date() }
       }).select('_id').lean();
 
       return {
@@ -469,30 +201,22 @@ const getNearbyDrivers = async (req, res) => {
         tripsAsDriver: user.stats.tripsAsDriver,
         lastActive: user.metadata.lastActive,
         hasActiveTrip: !!activeTrip,
-        activeTripId: activeTrip ? activeTrip._id.toString() : null // ✅ AJOUT
+        activeTripId: activeTrip ? activeTrip._id.toString() : null
       };
     }));
 
-    res.status(200).json({
-      success: true,
-      count: driversWithActivity.length,
-      drivers: driversWithActivity
-    });
+    res.status(200).json({ success: true, count: driversWithActivity.length, drivers: driversWithActivity });
 
   } catch (error) {
-    console.error('❌ Erreur récupération conductrices proches:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
+    console.error('Erreur récupération conductrices:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
 module.exports = {
   getPublicProfile,
-  uploadAvatar,
   updateCompleteProfile,
   uploadUserImage,
-  getNearbyDrivers, // ✅ AJOUT
+  getNearbyDrivers,
   upload
 };
