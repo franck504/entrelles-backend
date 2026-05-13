@@ -1,4 +1,3 @@
-// Données par défaut pour génération automatique
 const cityData = {
   'Paris': { 
     lat: 48.8566, lng: 2.3522,
@@ -36,148 +35,97 @@ const distanceMatrix = {
   'Lyon-Nice': 470, 'Nice-Lyon': 470
 };
 
+/**
+ * Middleware pour enrichir les données de trajet (coordonnées, distances par défaut)
+ */
 const enrichTripData = (req, res, next) => {
   try {
-    console.log('🔧 Enrichissement des données de trajet...');
-    console.log('📥 Données reçues:', JSON.stringify(req.body, null, 2));
-
-    // 1. Enrichir departure
+    // Enrichissement du lieu de départ
     if (req.body.departure && req.body.departure.city) {
       const city = req.body.departure.city;
       const cityInfo = cityData[city];
       
       if (cityInfo) {
-        // Ajouter coordonnées si manquantes
         if (!req.body.departure.coordinates) {
-          req.body.departure.coordinates = {
-            lat: cityInfo.lat,
-            lng: cityInfo.lng
-          };
+          req.body.departure.coordinates = { lat: cityInfo.lat, lng: cityInfo.lng };
         }
-        
-        // Ajouter adresse si manquante
         if (!req.body.departure.address) {
-          req.body.departure.address = cityInfo.addresses[
-            Math.floor(Math.random() * cityInfo.addresses.length)
-          ];
+          req.body.departure.address = cityInfo.addresses[Math.floor(Math.random() * cityInfo.addresses.length)];
         }
       }
     }
 
-    // 2. Enrichir arrival
+    // Enrichissement du lieu d'arrivée
     if (req.body.arrival && req.body.arrival.city) {
       const city = req.body.arrival.city;
       const cityInfo = cityData[city];
       
       if (cityInfo) {
-        // Ajouter coordonnées si manquantes
         if (!req.body.arrival.coordinates) {
-          req.body.arrival.coordinates = {
-            lat: cityInfo.lat,
-            lng: cityInfo.lng
-          };
+          req.body.arrival.coordinates = { lat: cityInfo.lat, lng: cityInfo.lng };
         }
-        
-        // Ajouter adresse si manquante
         if (!req.body.arrival.address) {
-          req.body.arrival.address = cityInfo.addresses[
-            Math.floor(Math.random() * cityInfo.addresses.length)
-          ];
+          req.body.arrival.address = cityInfo.addresses[Math.floor(Math.random() * cityInfo.addresses.length)];
         }
       }
     }
 
-    // 3. Calculer distance si manquante
+    // Calcul de la distance et durée par défaut
     if (!req.body.distance && req.body.departure?.city && req.body.arrival?.city) {
       const route = `${req.body.departure.city}-${req.body.arrival.city}`;
       req.body.distance = distanceMatrix[route] || Math.floor(Math.random() * 400) + 200;
     }
 
-    // 4. Calculer durée si manquante
     if (!req.body.estimatedDuration && req.body.distance) {
-      req.body.estimatedDuration = Math.floor(req.body.distance / 90 * 60); // ~90km/h
+      req.body.estimatedDuration = Math.floor(req.body.distance / 90 * 60); // Estimation à 90km/h
     }
 
-    // 5. Le prix sera calculé dans le contrôleur avec la formule : 0.55 * nombre de places * distance
-    // On supprime le calcul ici pour éviter les conflits
-
-    // 6. Ajouter places disponibles si manquantes
     if (!req.body.availableSeats) {
-      req.body.availableSeats = Math.floor(Math.random() * 3) + 1; // 1-3 places
+      req.body.availableSeats = Math.floor(Math.random() * 3) + 1;
     }
 
-    console.log('✅ Données enrichies:', JSON.stringify(req.body, null, 2));
     next();
 
   } catch (error) {
-    console.error('❌ Erreur enrichissement:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de l\'enrichissement des données',
-      error: error.message
-    });
+    console.error('Erreur enrichissement des données de trajet:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de l\'enrichissement des données' });
   }
 };
 
-// ✅ AMÉLIORER la fonction requireKycVerification
+/**
+ * Middleware exigeant une vérification KYC (Stripe Connect) pour créer un trajet
+ */
 const requireKycVerification = async (req, res, next) => {
   try {
     const User = require('../models/User');
     const user = await User.findById(req.user.id);
     
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
-    }
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
     
     const kycStatus = user.getKycStatus();
     
-    // ✅ VÉRIFICATION STRICTE avec logs détaillés
-    console.log('🔍 KYC Check for user:', user.email);
-    console.log('🔍 KYC Status:', kycStatus);
-    
     if (!kycStatus.canReceivePayments) {
-      console.log('❌ KYC verification failed:', kycStatus.status);
-      
       return res.status(403).json({
         success: false,
-        message: 'Vérification KYC requise pour créer des trajets payants',
+        message: 'Vérification d\'identité requise pour proposer des trajets',
         error: 'KYC_VERIFICATION_REQUIRED',
         kyc: {
           status: kycStatus.status,
-          message: kycStatus.message,
-          nextAction: kycStatus.nextAction,
           requiresOnboarding: kycStatus.requiresOnboarding,
-          connectAccountId: kycStatus.connectAccountId,
-          hasConnectAccount: kycStatus.hasConnectAccount
-        },
-        action: {
-          type: 'popup',
-          title: 'Vérification requise',
-          description: 'Vous devez vérifier votre identité pour créer des trajets payants',
-          buttonText: 'Commencer la vérification',
-          redirectTo: '/kyc/start'
+          connectAccountId: kycStatus.connectAccountId
         }
       });
     }
     
-    console.log('✅ KYC vérifié pour utilisateur:', user.email);
     next();
     
   } catch (error) {
-    console.error('❌ Erreur vérification KYC:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la vérification KYC',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    console.error('Erreur vérification KYC:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur lors de la vérification d\'identité' });
   }
 };
 
-// ✅ MODIFIER L'EXPORT
 module.exports = { 
   enrichTripData,
-  requireKycVerification // ✅ AJOUTER CETTE LIGNE
+  requireKycVerification
 };

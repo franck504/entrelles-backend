@@ -1,6 +1,10 @@
+const User = require('../models/User');
+
+/**
+ * Middleware exigeant un abonnement premium actif pour accéder à la route
+ */
 const requireActiveSubscription = async (req, res, next) => {
   try {
-    const User = require('../models/User');
     const user = await User.findById(req.user.id);
     
     if (!user) {
@@ -19,25 +23,17 @@ const requireActiveSubscription = async (req, res, next) => {
           status: user.getSubscriptionStatus(),
           plan: user.subscription.plan,
           isActive: user.subscription.isActive
-        },
-        action: {
-          type: 'subscription_required',
-          title: 'Abonnement requis',
-          description: 'Cette fonctionnalité nécessite un abonnement premium actif',
-          buttonText: 'S\'abonner maintenant',
-          redirectTo: '/subscription/plans'
         }
       });
     }
     
-    console.log('✅ Abonnement vérifié pour utilisateur:', user.email);
     next();
     
   } catch (error) {
-    console.error('❌ Erreur vérification abonnement:', error);
+    console.error('Erreur vérification abonnement:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la vérification de l\'abonnement'
+      message: 'Erreur serveur lors de la vérification de l\'abonnement'
     });
   }
 };

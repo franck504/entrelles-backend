@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-
 const {
   createTrip,
   getAllTrips,
@@ -11,7 +10,6 @@ const {
   searchTrips,
   getMyTrips,
   getTripStats,
-  deleteAllTrips,
   markTripAsViewed
 } = require('../controllers/tripController');
 
@@ -19,25 +17,22 @@ const { protect } = require('../middleware/authMiddleware');
 const { requireActiveSubscription } = require('../middleware/subscriptionMiddleware');
 const { enrichTripData, requireKycVerification } = require('../middleware/tripValidation');
 
-// ✅ ROUTES PUBLIQUES EN PREMIER
+// Routes publiques
 router.get('/search', searchTrips);
 router.get('/', getAllTrips);
 router.get('/:id', getTripById);
-router.delete('/delete-all', deleteAllTrips);
 
-// ✅ ROUTES PROTÉGÉES
+// Routes protégées
 router.use(protect);
 
-// ✅ ROUTES STATIQUES AVANT ROUTES DYNAMIQUES
+// Gestion des trajets personnels et statistiques
 router.get('/my-trips', requireActiveSubscription, getMyTrips);
 router.get('/my-stats', requireActiveSubscription, getTripStats);
 
-// ✅ CRÉATION AVEC KYC OBLIGATOIRE
+// Création d'un trajet (nécessite un abonnement actif et une vérification d'identité)
 router.post('/', requireActiveSubscription, requireKycVerification, enrichTripData, createTrip);
 
-// ✅ SUPPRESSION TOTALE (DEV/ADMIN)
-
-// ✅ ROUTES DYNAMIQUES À LA FIN
+// Actions spécifiques sur un trajet
 router.post('/:id/view', markTripAsViewed);
 router.patch('/:id/cancel', requireActiveSubscription, cancelTrip);
 router.put('/:id', requireActiveSubscription, requireKycVerification, updateTrip);

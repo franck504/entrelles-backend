@@ -1,199 +1,126 @@
 const googleMapsService = require('../utils/googleMapsService');
 
 /**
- * @route POST /api/maps/calculate-route
- * @desc Calcule la distance, durée et prix d'un trajet
- * @access Public
+ * @desc    Calcule l'itinéraire, la distance, la durée et le prix suggéré
+ * @route   POST /api/maps/calculate-route
+ * @access  Public
  */
 exports.calculateRoute = async (req, res) => {
-    try {
-        const { departure, arrival, availableSeats = 3 } = req.body;
+  try {
+    const { departure, arrival, availableSeats = 3 } = req.body;
 
-        // Validation
-        if (!departure || !arrival) {
-            return res.status(400).json({
-                success: false,
-                message: 'departure and arrival are required',
-            });
-        }
-
-        if (!departure.latitude || !departure.longitude || !arrival.latitude || !arrival.longitude) {
-            return res.status(400).json({
-                success: false,
-                message: 'latitude and longitude are required for both departure and arrival',
-            });
-        }
-
-        console.log(`📍 Calcul itinéraire: ${departure.address || 'Unknown'} → ${arrival.address || 'Unknown'}`);
-
-        // Calcul distance via Google Maps
-        const distanceData = await googleMapsService.calculateDistance(
-            { latitude: departure.latitude, longitude: departure.longitude },
-            { latitude: arrival.latitude, longitude: arrival.longitude }
-        );
-
-        // Calcul du prix
-        const pricePerSeat = googleMapsService.calculatePrice(
-            distanceData.distanceKm,
-            availableSeats
-        );
-
-        // Réponse
-        const response = {
-            success: true,
-            data: {
-                departure: {
-                    latitude: departure.latitude,
-                    longitude: departure.longitude,
-                },
-                arrival: {
-                    latitude: arrival.latitude,
-                    longitude: arrival.longitude,
-                },
-                distance: distanceData.distanceKm,
-                duration: distanceData.durationHours,
-                pricePerSeat,
-                departureAddress: departure.address || '',
-                arrivalAddress: arrival.address || '',
-            },
-            calculatedAt: new Date().toISOString(),
-        };
-
-        console.log(`✅ Réponse: ${distanceData.distanceKm}km, ${pricePerSeat}€/siège`);
-        res.json(response);
-
-    } catch (error) {
-        console.error('❌ Erreur calculateRoute:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to calculate route',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        });
+    if (!departure || !arrival) {
+      return res.status(400).json({ success: false, message: 'Le départ et l\'arrivée sont requis' });
     }
+
+    if (!departure.latitude || !departure.longitude || !arrival.latitude || !arrival.longitude) {
+      return res.status(400).json({ success: false, message: 'Les coordonnées (lat/lng) sont requises' });
+    }
+
+    const distanceData = await googleMapsService.calculateDistance(
+      { latitude: departure.latitude, longitude: departure.longitude },
+      { latitude: arrival.latitude, longitude: arrival.longitude }
+    );
+
+    const pricePerSeat = googleMapsService.calculatePrice(distanceData.distanceKm, availableSeats);
+
+    res.json({
+      success: true,
+      data: {
+        departure: { latitude: departure.latitude, longitude: departure.longitude },
+        arrival: { latitude: arrival.latitude, longitude: arrival.longitude },
+        distance: distanceData.distanceKm,
+        duration: distanceData.durationHours,
+        pricePerSeat,
+        departureAddress: departure.address || '',
+        arrivalAddress: arrival.address || '',
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur calculateRoute:', error);
+    res.status(500).json({ success: false, message: 'Échec du calcul de l\'itinéraire' });
+  }
 };
 
 /**
- * @route GET /api/maps/geocode
- * @desc Résout une adresse en coordonnées
- * @access Public
+ * @desc    Géocodage : transforme une adresse textuelle en coordonnées
+ * @route   GET /api/maps/geocode
+ * @access  Public
  */
 exports.geocode = async (req, res) => {
-    try {
-        const { text } = req.query;
+  try {
+    const { text } = req.query;
 
-        if (!text) {
-            return res.status(400).json({
-                success: false,
-                message: 'text parameter is required',
-            });
-        }
-
-        const data = await googleMapsService.geocode(text);
-
-        if (!data) {
-            return res.status(404).json({
-                success: false,
-                message: 'No coordinates found for this address',
-            });
-        }
-
-        res.json({
-            success: true,
-            data,
-        });
-
-    } catch (error) {
-        console.error('❌ Erreur geocode controller:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to geocode address',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        });
+    if (!text) {
+      return res.status(400).json({ success: false, message: 'Le paramètre text est requis' });
     }
+
+    const data = await googleMapsService.geocode(text);
+
+    if (!data) {
+      return res.status(404).json({ success: false, message: 'Aucune coordonnée trouvée pour cette adresse' });
+    }
+
+    res.json({ success: true, data });
+
+  } catch (error) {
+    console.error('Erreur geocode controller:', error);
+    res.status(500).json({ success: false, message: 'Échec du géocodage' });
+  }
 };
 
 /**
- * @route GET /api/maps/reverse-geocode
- * @desc Résout des coordonnées en adresse
- * @access Public
+ * @desc    Géocodage inversé : transforme des coordonnées en adresse textuelle
+ * @route   GET /api/maps/reverse-geocode
+ * @access  Public
  */
 exports.reverseGeocode = async (req, res) => {
-    try {
-        const { lat, lon } = req.query;
+  try {
+    const { lat, lon } = req.query;
 
-        if (!lat || !lon) {
-            return res.status(400).json({
-                success: false,
-                message: 'lat and lon parameters are required',
-            });
-        }
-
-        const address = await googleMapsService.reverseGeocode(lat, lon);
-
-        if (!address) {
-            return res.status(404).json({
-                success: false,
-                message: 'No address found for these coordinates',
-            });
-        }
-
-        res.json({
-            success: true,
-            data: { address },
-        });
-
-    } catch (error) {
-        console.error('❌ Erreur reverse-geocode controller:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to reverse geocode coordinates',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        });
+    if (!lat || !lon) {
+      return res.status(400).json({ success: false, message: 'Les paramètres lat et lon sont requis' });
     }
+
+    const address = await googleMapsService.reverseGeocode(lat, lon);
+
+    if (!address) {
+      return res.status(404).json({ success: false, message: 'Aucune adresse trouvée pour ces coordonnées' });
+    }
+
+    res.json({ success: true, data: { address } });
+
+  } catch (error) {
+    console.error('Erreur reverse-geocode controller:', error);
+    res.status(500).json({ success: false, message: 'Échec du géocodage inversé' });
+  }
 };
 
 /**
- * @route GET /api/maps/cache-stats
- * @desc Statistiques du cache Google Maps
- * @access Public (à sécuriser en production)
+ * @desc    Récupérer les statistiques du cache Google Maps
+ * @route   GET /api/maps/cache-stats
+ * @access  Public
  */
 exports.getCacheStats = (req, res) => {
-    try {
-        const stats = googleMapsService.getCacheStats();
-        res.json({
-            success: true,
-            data: stats,
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to get cache stats',
-            error: error.message,
-        });
-    }
+  try {
+    const stats = googleMapsService.getCacheStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Échec de la récupération des stats du cache' });
+  }
 };
 
 /**
- * @route DELETE /api/maps/cache
- * @desc Vider le cache (debug uniquement)
- * @access Private (à protéger en production)
+ * @desc    Vider le cache de géocodage
+ * @route   DELETE /api/maps/cache
+ * @access  Privé
  */
 exports.clearCache = (req, res) => {
-    try {
-        googleMapsService.clearCache();
-        res.json({
-            success: true,
-            message: 'Cache cleared successfully',
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to clear cache',
-            error: error.message,
-        });
-    }
+  try {
+    googleMapsService.clearCache();
+    res.json({ success: true, message: 'Cache vidé avec succès' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Échec du vidage du cache' });
+  }
 };
-
-
-
-// okay

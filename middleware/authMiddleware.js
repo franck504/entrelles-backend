@@ -1,12 +1,14 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Middleware pour protéger les routes
+/**
+ * Middleware pour protéger les routes nécessitant une authentification
+ */
 const protect = async (req, res, next) => {
   try {
     let token;
 
-    // Vérifier si le token existe dans les headers ou cookies
+    // Récupération du token depuis les headers ou les cookies
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     } else if (req.cookies.token) {
@@ -16,33 +18,28 @@ const protect = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Access denied. No token provided.'
+        message: 'Accès refusé. Aucun jeton fourni.'
       });
     }
 
     try {
-      // Vérifier le token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Trouver l'utilisateur
       const user = await User.findById(decoded.userId);
 
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: 'Token is valid but user no longer exists'
+          message: 'Utilisateur non trouvé'
         });
       }
 
-      // Vérifier si le compte est actif
       if (user.status !== 'active') {
         return res.status(403).json({
           success: false,
-          message: 'Account is not active'
+          message: 'Ce compte n\'est pas actif'
         });
       }
 
-      // Ajouter l'utilisateur à la requête
       req.user = {
         id: user._id,
         email: user.email,
@@ -53,20 +50,22 @@ const protect = async (req, res, next) => {
     } catch (error) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token'
+        message: 'Jeton invalide'
       });
     }
 
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    console.error('Erreur middleware d\'authentification:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error in authentication'
+      message: 'Erreur serveur lors de l\'authentification'
     });
   }
 };
 
-// Middleware optionnel (utilisateur connecté ou non)
+/**
+ * Middleware d'authentification optionnel (permet d'identifier l'utilisateur s'il est connecté)
+ */
 const optionalAuth = async (req, res, next) => {
   try {
     let token;
@@ -90,7 +89,6 @@ const optionalAuth = async (req, res, next) => {
           };
         }
       } catch (error) {
-        // Token invalide, mais on continue sans utilisateur
         req.user = null;
       }
     }

@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-
 const {
   createBooking,
   getAllBookings,
@@ -9,29 +8,27 @@ const {
   cancelBooking,
   completeBooking,
   addReview,
-  getMyBookings,
-  deleteAllBookings
+  getMyBookings
 } = require('../controllers/bookingController');
 
 const { protect } = require('../middleware/authMiddleware');
 const { requireActiveSubscription } = require('../middleware/subscriptionMiddleware');
 
-// Routes publiques (Maintenance/Test)
-router.delete('/delete-all', deleteAllBookings);
-
-// Toutes les routes suivantes nécessitent une authentification
+// Authentification requise pour toutes les routes de réservation
 router.use(protect);
 
-// Routes principales
+// Routes de gestion des réservations
 router.post('/', requireActiveSubscription, createBooking);
 router.get('/', getAllBookings);
 router.get('/my-bookings', getMyBookings);
 router.get('/:id', getBookingById);
 
-// Actions sur les réservations
+// Actions de changement de statut
 router.put('/:id/confirm', confirmBooking);
 router.put('/:id/cancel', cancelBooking);
 router.put('/:id/complete', completeBooking);
+
+// Évaluation après trajet
 router.post('/:id/review', addReview);
 
 module.exports = router;

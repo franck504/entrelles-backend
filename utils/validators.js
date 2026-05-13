@@ -1,104 +1,94 @@
 const { body, validationResult } = require('express-validator');
 
-// Middleware pour gérer les erreurs de validation
+/**
+ * Gère les erreurs retournées par express-validator
+ */
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({
       success: false,
-      message: 'Validation errors',
+      message: 'Erreurs de validation',
       errors: errors.array().map(error => ({
         field: error.path,
-        message: error.msg,
-        value: error.value
+        message: error.msg
       }))
     });
   }
   next();
 };
 
-// Validation pour l'inscription
+/**
+ * Validation pour l'inscription d'une nouvelle utilisatrice
+ */
 const validateRegister = [
   body('email')
     .isEmail()
     .normalizeEmail()
-    .withMessage('Please provide a valid email address'),
+    .withMessage('Veuillez fournir une adresse email valide'),
 
   body('password')
     .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long')
+    .withMessage('Le mot de passe doit contenir au moins 6 caractères')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
+    .withMessage('Le mot de passe doit contenir une minuscule, une majuscule et un chiffre'),
 
   body('displayName')
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('Display name must be between 2 and 50 characters'),
-
-  body('firstName')
-    .optional()
-    .trim()
-    .isLength({ max: 30 })
-    .withMessage('First name cannot exceed 30 characters'),
-
-  body('lastName')
-    .optional()
-    .trim()
-    .isLength({ max: 30 })
-    .withMessage('Last name cannot exceed 30 characters'),
+    .withMessage('Le nom d\'affichage doit contenir entre 2 et 50 caractères'),
 
   body('gender')
     .equals('femme')
-    .withMessage('Only women are allowed to register on this platform'),
-
-  body('phone')
-    .optional()
-    .matches(/^[\+]?[0-9]{10,15}$/)
-    .withMessage('Please provide a valid phone number'),
+    .withMessage('Seules les femmes peuvent s\'inscrire sur cette plateforme'),
 
   handleValidationErrors
 ];
 
-// Validation pour la connexion
+/**
+ * Validation pour la connexion
+ */
 const validateLogin = [
   body('email')
     .isEmail()
     .normalizeEmail()
-    .withMessage('Please provide a valid email address'),
+    .withMessage('Veuillez fournir une adresse email valide'),
 
   body('password')
     .notEmpty()
-    .withMessage('Password is required'),
+    .withMessage('Le mot de passe est requis'),
 
   handleValidationErrors
 ];
 
-// Validation pour la réinitialisation du mot de passe
+/**
+ * Validation pour la demande de réinitialisation de mot de passe
+ */
 const validateForgotPassword = [
   body('email')
     .isEmail()
     .normalizeEmail()
-    .withMessage('Please provide a valid email address'),
+    .withMessage('Veuillez fournir une adresse email valide'),
 
   handleValidationErrors
 ];
 
-// Validation pour le nouveau mot de passe
+/**
+ * Validation pour la réinitialisation effective du mot de passe
+ */
 const validateResetPassword = [
   body('token')
     .notEmpty()
-    .withMessage('Reset token is required'),
+    .withMessage('Le jeton de réinitialisation est requis'),
 
   body('password')
     .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
+    .withMessage('Le mot de passe doit contenir au moins 6 caractères'),
 
   body('confirmPassword')
     .custom((value, { req }) => {
       if (value !== req.body.password) {
-        throw new Error('Password confirmation does not match password');
+        throw new Error('La confirmation du mot de passe ne correspond pas');
       }
       return true;
     }),
@@ -106,97 +96,49 @@ const validateResetPassword = [
   handleValidationErrors
 ];
 
-// Validation pour la mise à jour du profil
+/**
+ * Validation pour la mise à jour du profil
+ */
 const validateUpdateProfile = [
   body('displayName')
     .optional()
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('Display name must be between 2 and 50 characters'),
-
-  body('firstName')
-    .optional()
-    .trim()
-    .isLength({ max: 30 })
-    .withMessage('First name cannot exceed 30 characters'),
-
-  body('lastName')
-    .optional()
-    .trim()
-    .isLength({ max: 30 })
-    .withMessage('Last name cannot exceed 30 characters'),
+    .withMessage('Le nom d\'affichage doit contenir entre 2 et 50 caractères'),
 
   body('phone')
     .optional()
     .matches(/^[\+]?[0-9]{10,15}$/)
-    .withMessage('Please provide a valid phone number (10-15 digits, optional + prefix)'),
+    .withMessage('Veuillez fournir un numéro de téléphone valide'),
 
   body('bio')
     .optional()
     .isLength({ max: 500 })
-    .withMessage('Bio cannot exceed 500 characters'),
-
-  body('profileImageUrl')
-    .optional()
-    .isURL()
-    .withMessage('Please provide a valid URL for profile image'),
-
-  body('vehicleImageUrl')
-    .optional()
-    .isURL()
-    .withMessage('Please provide a valid URL for vehicle image'),
-
-  body('address')
-    .optional()
-    .isObject()
-    .withMessage('Address must be an object'),
+    .withMessage('La biographie ne peut pas dépasser 500 caractères'),
 
   handleValidationErrors
 ];
 
-// ✅ VALIDATION ALLÉGÉE POUR TRAJETS (compatible avec enrichissement)
+/**
+ * Validation pour la création d'un trajet
+ */
 const validateCreateTrip = [
-  // ✅ OBLIGATOIRES SEULEMENT
   body('departure.city')
     .notEmpty()
-    .withMessage('Departure city is required'),
+    .withMessage('La ville de départ est requise'),
 
   body('arrival.city')
     .notEmpty()
-    .withMessage('Arrival city is required'),
+    .withMessage('La ville d\'arrivée est requise'),
 
   body('departureDateTime')
     .notEmpty()
     .isISO8601()
-    .withMessage('Valid departure date and time is required'),
+    .withMessage('Une date et heure de départ valides sont requises'),
 
   body('availableSeats')
     .isInt({ min: 1, max: 8 })
-    .withMessage('Available seats must be between 1 and 8'),
-
-  // ✅ OPTIONNELS (seront enrichis automatiquement)
-  body('departure.address')
-    .optional()
-    .trim(),
-
-  body('arrival.address')
-    .optional()
-    .trim(),
-
-  body('pricePerSeat')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Price per seat must be a positive number'),
-
-  body('distance')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Distance must be a positive number'),
-
-  body('description')
-    .optional()
-    .isLength({ max: 500 })
-    .withMessage('Description cannot exceed 500 characters'),
+    .withMessage('Le nombre de places doit être compris entre 1 et 8'),
 
   handleValidationErrors
 ];
